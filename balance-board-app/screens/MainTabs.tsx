@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
-import NewScreen from "./NewScreen";
+import NewStack from "./NewStack"; // ✅ use the stack, not NewScreen
 import HistoryScreen from "./HistoryScreen";
 import Progress from "./Progress";
 import ProfileScreen from "./ProfileScreen";
@@ -30,7 +30,7 @@ export default function MainTabs() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
         tabBarActiveTintColor: TEXT,
         tabBarInactiveTintColor: MUTED,
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarIcon: ({ color, size }) => {
           const name =
             route.name === "New"
               ? "sparkles-outline"
@@ -40,17 +40,13 @@ export default function MainTabs() {
               ? "trending-up-outline"
               : "person-outline";
 
-          return (
-            <Ionicons
-              name={name as any}
-              size={size}
-              color={color}
-            />
-          );
+          return <Ionicons name={name as any} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="New" component={NewScreen} />
+      {/* ✅ IMPORTANT: New tab must use the stack */}
+      <Tab.Screen name="New" component={NewStack} />
+
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Progress" component={Progress} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
