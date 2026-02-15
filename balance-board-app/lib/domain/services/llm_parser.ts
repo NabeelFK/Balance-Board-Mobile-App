@@ -103,8 +103,7 @@ export async function analyzeHesitation(
     - "I don't understand what's wrong" -> REFINE_PROBLEM
     - "None of these look good" -> ADD_MORE_OPTIONS
     - "I'm scared of the risks" -> DEEPEN_ANALYSIS
-    - "I just can't pull the trigger" -> FORCE_DECISION
-    
+    - "They all look good", "I can't pick just one", "Hard to choose" -> FORCE_DECISION
     Output strictly valid JSON matching HesitationAnalysisSchema.
   `;
 
