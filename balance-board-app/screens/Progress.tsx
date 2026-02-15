@@ -12,6 +12,7 @@ import * as Crypto from "expo-crypto";
 import { useUser } from "@clerk/clerk-expo";
 import { useSupabase } from "../providers/SupabaseProvider";
 import BalanceHeader from "../components/BalanceHeader";
+import { useIsFocused } from "@react-navigation/native";
 
 type LeaderRow = {
   profile_id: string;
@@ -44,6 +45,7 @@ function emailLocalPart(email?: string | null) {
 export default function Progress() {
   const supabase = useSupabase();
   const { user } = useUser();
+  const isFocused = useIsFocused(); // Add focus detection
 
   const [profileId, setProfileId] = useState<string | null>(null);
   const [xp, setXp] = useState<number>(0);
@@ -126,11 +128,12 @@ export default function Progress() {
       }
     }
 
-    ensureProfile();
+    // Reload profile whenever Progress screen is focused
+    if (isFocused) ensureProfile();
     return () => {
       cancelled = true;
     };
-  }, [clerkUserId, supabase, user]);
+  }, [clerkUserId, supabase, user, isFocused]);
 
   const fetchLeaderboard = async () => {
     setLoadingBoard(true);

@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import React, { useMemo, useState, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useUser } from "@clerk/clerk-expo";
 import BalanceHeader from "../components/BalanceHeader";
+import { awardXpToUser } from "../lib/db/awardXpToUser";
+import { Easing, Image } from "react-native";
 
 // ✅ adjust if your supabaseClient location differs
 import { supabase } from "../lib/db/supabaseClient";
@@ -20,6 +22,10 @@ export default function FlowchartScreen() {
   const { problem, sessions, answersByDecision, outcomes, queryCount } = route.params;
 
   const [chosenDecision, setChosenDecision] = useState<string | null>(null);
+  // XP Animation state
+  const [xpAnim, setXpAnim] = useState({ visible: false, amount: 0 });
+  const xpOpacity = useRef(new Animated.Value(0)).current;
+  const xpTranslate = useRef(new Animated.Value(40)).current;
 
   const score = useMemo(() => {
     // base +200, each question -20, clamp at 0
@@ -35,35 +41,97 @@ const confirm = async () => {
   setSaving(true);
   setSaveError(null);
 
-    try {
-      const chosenOutcome = outcomes?.[chosenDecision]?.predicted_outcome ?? "";
+  try {
+    const chosenOutcome = outcomes?.[chosenDecision]?.predicted_outcome ?? "";
 
-      const payload = {
-        user_id: user?.id ?? null,
-        problem: problem ?? "",
-        chosen_decision: chosenDecision,
-        chosen_outcome: chosenOutcome,
-        score: Math.max(0, 200 - 20 * (Number(queryCount) || 0)),
-        query_count: Number(queryCount) || 0,
-        details: { sessions, answersByDecision, outcomes },
-        created_at: new Date().toISOString(),
-      };
+    const payload = {
+      user_id: user?.id ?? null,
+      problem: problem ?? "",
+      chosen_decision: chosenDecision,
+      chosen_outcome: chosenOutcome,
+      score: Math.max(0, 200 - 20 * (Number(queryCount) || 0)),
+      query_count: Number(queryCount) || 0,
+      details: { sessions, answersByDecision, outcomes },
+      created_at: new Date().toISOString(),
+    };
 
-      console.log("INSERT payload:", payload);
+    console.log("INSERT payload:", payload);
 
-      const data = await saveDecision(payload);
+    const data = await saveDecision(payload);
 
-      console.log("INSERT result:", data, null);
+    console.log("INSERT result:", data, null);
 
-      // go to History tab
-      navigation.getParent()?.navigate("History");
-    } catch (e: any) {
-      console.log("CONFIRM ERROR:", e);
-      setSaveError(e?.message ?? "Failed to save");
-    } finally {
-      setSaving(false);
+    // award XP
+    const xpAmount = score;
+    if (user?.id && xpAmount > 0) {
+      try {
+        await awardXpToUser(user.id, xpAmount, `decision-${Date.now()}`);
+        // Replace showXpPopup with a simple timeout
+        const showXpPopup = (amount: number, onFinish?: () => void) => {
+          setXpAnim({ visible: true, amount });
+          setTimeout(() => {
+            setXpAnim({ visible: false, amount: 0 });
+            if (onFinish) onFinish();
+          }, 3000);
+        };
+        showXpPopup(xpAmount, () => {
+          navigation.getParent()?.navigate("History");
+        });
+        return; // navigation will happen after animation
+      } catch (err) {
+        console.warn('XP award failed:', err);
+      }
     }
+    // fallback navigation if no XP
+    navigation.getParent()?.navigate("History");
+  } catch (e: any) {
+    console.log("CONFIRM ERROR:", e);
+    setSaveError(e?.message ?? "Failed to save");
+  } finally {
+    setSaving(false);
+  }
 };
+
+  {/* XP Popup Animation */}
+  {xpAnim.visible && (
+    <View
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        pointerEvents: "box-none",
+      }}
+    >
+      <View style={{
+        backgroundColor: "#1BCFA6",
+        borderRadius: 22,
+        paddingVertical: 28,
+        paddingHorizontal: 32, // reduced for more margin
+        flexDirection: "row",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 8,
+        maxWidth: '50%', // ensures popup doesn't touch sides
+      }}>
+        <Image
+          source={require("../assets/xp-sparkle.png")}
+          style={{ width: 54, height: 54, marginRight: 18 }}
+          resizeMode="contain"
+        />
+        <Text style={{ color: "white", fontWeight: "900", fontSize: 32 }}>
+          You earned {xpAnim.amount} XP!
+        </Text>
+      </View>
+    </View>
+  )}
 
   return (
     <View style={styles.screen}>
@@ -144,6 +212,46 @@ const confirm = async () => {
           This will save your decision to History.
         </Text>
       </ScrollView>
+
+      {xpAnim.visible && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            pointerEvents: "box-none",
+          }}
+        >
+          <View style={{
+            backgroundColor: "#1b6b41",
+            borderColor: "#000000",
+            borderRadius: 22,
+            paddingVertical: 28,
+            paddingHorizontal: 44,
+            flexDirection: "row",
+            alignItems: "center",
+            shadowColor: "#000",
+            shadowOpacity: 0.18,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 8,
+          }}>
+            <Image
+              source={require("../assets/xp-sparkle.png")}
+              style={{ width: 54, height: 54, marginRight: 18 }}
+              resizeMode="contain"
+            />
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 32 }}>
+              You earned {xpAnim.amount} XP!
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -217,4 +325,22 @@ const styles = StyleSheet.create({
   confirmText: { color: "white", fontWeight: "900", fontSize: 22 },
 
   smallHint: { marginTop: 8, color: MUTED, textAlign: "center", fontSize: 12 },
+
+  xpPopup: {
+    position: "absolute",
+    top: -30,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4CB59E",
+    borderRadius: 16,
+    padding: 12,
+  },
+  xpPopupContent: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 12,
+  },
+  xpPopupText: { color: "white", fontWeight: "900", fontSize: 24 },
 });
