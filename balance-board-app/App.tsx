@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Linking } from "react-native";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-expo";
 import * as SecureStore from "expo-secure-store";
 
@@ -10,6 +11,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import MainTabs from "./screens/MainTabs";
 import { ScrollView, RefreshControl, Text } from 'react-native';
+
+import ProfileBootstrapper from "./components/ProfileBootstrapper";
 
 const tokenCache = {
   async getToken(key: string) {
@@ -23,6 +26,20 @@ const tokenCache = {
 export default function App() {
   const [authScreen, setAuthScreen] = useState<"login" | "signup">("login");
 
+  useEffect(() => {
+    // Log incoming deep links so we can debug email_link redirects
+    const handleUrl = (event: { url: string }) => {
+      console.log("Incoming URL:", event.url);
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) console.log("Initial URL:", url);
+    });
+
+    const sub = Linking.addEventListener("url", handleUrl);
+    return () => sub.remove();
+  }, []);
+
   return (
     <ClerkProvider
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
@@ -31,9 +48,10 @@ export default function App() {
       <SignedIn>
         <SafeAreaProvider>
           <SupabaseProvider>
-            <NavigationContainer>
-              <MainTabs />
-            </NavigationContainer>
+            <ProfileBootstrapper />
+              <NavigationContainer>
+                <MainTabs />
+              </NavigationContainer>
           </SupabaseProvider>
         </SafeAreaProvider>
       </SignedIn>

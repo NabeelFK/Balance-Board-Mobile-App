@@ -1,6 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet } from "react-native";
 
 import NewStack from "./NewStack"; // ✅ use the stack, not NewScreen
 import HistoryScreen from "./HistoryScreen";
@@ -24,9 +25,22 @@ export default function MainTabs() {
           borderTopColor: "#BFE7E5",
           borderTopWidth: 1,
           height: 74,
-          paddingBottom: 12,
-          paddingTop: 8,
+          paddingBottom: 8,
+          paddingTop: 6,
+          justifyContent: "center",
+          paddingHorizontal: 20,
+          position: "absolute",
+          left: 12,
+          right: 12,
+          bottom: 0,
+          borderRadius: 16,
+          elevation: 6,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowOffset: { width: 0, height: 4 },
+          shadowRadius: 8,
         },
+        tabBarItemStyle: { paddingTop: 6 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
         tabBarActiveTintColor: TEXT,
         tabBarInactiveTintColor: MUTED,
@@ -42,6 +56,18 @@ export default function MainTabs() {
 
           return <Ionicons name={name as any} size={size} color={color} />;
         },
+        tabBarButton: (props) => {
+          const { accessibilityState, children, onPress } = props as any;
+          const focused = accessibilityState?.selected;
+          return (
+            <Pressable
+              onPress={onPress}
+              style={[styles.tabButton, focused && styles.tabButtonActive]}
+            >
+              {children}
+            </Pressable>
+          );
+        },
       })}
     >
       {/* ✅ IMPORTANT: New tab must use the stack */}
@@ -53,3 +79,19 @@ export default function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabButton: {
+    flex: 0,
+    minWidth: 64,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    marginHorizontal: 6,
+    marginVertical: 2,
+    paddingHorizontal: 6,
+  },
+  tabButtonActive: {
+    backgroundColor: "rgba(39,185,174,0.10)",
+  },
+});

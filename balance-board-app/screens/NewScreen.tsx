@@ -47,16 +47,34 @@ const MUTED = "#4F7F81";
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
-  content: { flex: 1, paddingHorizontal: 26, paddingTop: 22 },
-  title: { fontSize: 32, lineHeight: 38, fontWeight: "700", color: TEXT, marginBottom: 10 },
-  sub: { fontSize: 14, color: MUTED, marginBottom: 18 },
+  content: {
+    flex: 1,
+    paddingHorizontal: 26,
+    paddingTop: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 48,
+  },
+  title: {
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "800",
+    color: TEXT,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  sub: { fontSize: 15, color: MUTED, marginBottom: 18, textAlign: "center" },
 
   startBtn: {
     backgroundColor: TEXT,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
+    maxWidth: 520,
+    paddingHorizontal: 18,
+    marginTop: 18,
   },
-  startText: { color: "white", fontWeight: "800", fontSize: 16 },
+  startText: { color: "white", fontWeight: "800", fontSize: 18 },
 });

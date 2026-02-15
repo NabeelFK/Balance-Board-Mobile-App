@@ -58,14 +58,27 @@ export default function HomeScreen() {
 
   // ✅ 2) ensure profile when user is loaded
   useEffect(() => {
-    async function ensureProfile() {
+    const tryEnsureProfile = async (attempt = 0) => {
       if (!user?.id) return;
 
+      const metaPublic = (user as any).publicMetadata?.display_name;
+      const metaUnsafe = (user as any).unsafeMetadata?.display_name;
+
       const displayName =
-        user.fullName ||
-        user.firstName ||
-        user.primaryEmailAddress?.emailAddress ||
-        "Anonymous";
+        (typeof metaPublic === "string" && metaPublic.trim().length >= 2
+          ? metaPublic.trim()
+          : typeof metaUnsafe === "string" && metaUnsafe.trim().length >= 2
+          ? metaUnsafe.trim()
+          : (typeof (user as any).username === "string" && (user as any).username.trim().length >= 2
+          ? (user as any).username.trim()
+          : user.fullName || user.firstName || "Anonymous"));
+
+      // If displayName looks like an email and metadata wasn't present, wait briefly and retry
+      const metaPresent = !!metaPublic || !!metaUnsafe;
+      if (!metaPresent && displayName.includes("@") && attempt < 3) {
+        setTimeout(() => tryEnsureProfile(attempt + 1), 600);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("profiles")
@@ -87,9 +100,9 @@ export default function HomeScreen() {
         setXp(Number(data.xp ?? 0));
         setCoins(Number(data.coins ?? 0));
       }
-    }
+    };
 
-    ensureProfile();
+    tryEnsureProfile();
   }, [user?.id, supabase]);
 
   return (

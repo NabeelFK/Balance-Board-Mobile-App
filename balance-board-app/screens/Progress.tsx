@@ -5,8 +5,8 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  FlatList,
   Image,
+  ScrollView,
 } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useUser } from "@clerk/clerk-expo";
@@ -49,11 +49,21 @@ export default function Progress() {
 
       setLoadingProfile(true);
       try {
+        const metaPublic = (user as any)?.publicMetadata?.display_name;
+        const metaUnsafe = (user as any)?.unsafeMetadata?.display_name;
+
         const displayName =
-          user?.fullName ||
-          user?.firstName ||
-          user?.primaryEmailAddress?.emailAddress ||
-          "Anonymous";
+          (typeof metaPublic === "string" && metaPublic.trim().length >= 2
+            ? metaPublic.trim()
+            : typeof metaUnsafe === "string" && metaUnsafe.trim().length >= 2
+            ? metaUnsafe.trim()
+            : (user?.fullName || user?.firstName || "Anonymous"));
+
+        const metaPresent = !!metaPublic || !!metaUnsafe;
+        if (!metaPresent && displayName.includes("@") && attempt < 3) {
+          setTimeout(() => tryEnsureProfile(attempt + 1), 600);
+          return;
+        }
 
         const { data, error } = await supabase
           .from("profiles")
@@ -147,7 +157,7 @@ export default function Progress() {
     <View style={styles.screen}>
       <BalanceHeader />
 
-      <View style={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.placeholderTitle}>Progress</Text>
 
         {loadingProfile ? (
@@ -187,16 +197,14 @@ export default function Progress() {
         {loadingBoard ? (
           <ActivityIndicator />
         ) : (
-          <FlatList
-            data={leaderboard}
-            keyExtractor={(item) => item.profile_id}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            renderItem={({ item, index }) => {
+          <View style={{ paddingBottom: 24 }}>
+            {leaderboard.map((item, index) => {
               const isMe = item.clerk_user_id === clerkUserId;
               const initial = (item.display_name?.[0] || "U").toUpperCase();
+              const itemLevel = Math.floor((Number(item.xp ?? 0)) / 100) + 1;
 
               return (
-                <View style={[styles.row, isMe && styles.rowMe]}>
+                <View key={item.profile_id} style={[styles.row, isMe && styles.rowMe]}>
                   <Text style={[styles.rank, isMe && styles.rankMe]}>#{index + 1}</Text>
 
                   <View style={styles.avatarWrap}>
@@ -211,14 +219,14 @@ export default function Progress() {
                     <Text style={[styles.name, isMe && styles.nameMe]} numberOfLines={1}>
                       {item.display_name}
                     </Text>
-                    <Text style={styles.small}>XP {item.xp}</Text>
+                    <Text style={styles.small}>Level {itemLevel}</Text>
                   </View>
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -230,7 +238,8 @@ const CARD = "#CDEEEE";
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
-  content: { flex: 1, paddingHorizontal: 26, paddingTop: 18 },
+  scroll: { flex: 1 },
+  contentContainer: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 140 },
 
   placeholderTitle: { fontSize: 20, fontWeight: "800", color: TEXT, marginBottom: 10 },
 
