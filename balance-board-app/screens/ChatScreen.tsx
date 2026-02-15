@@ -17,13 +17,6 @@ import BalanceHeader from "../components/BalanceHeader";
 
 type Role = "user" | "assistant";
 
-const [userId, setUserId] = useState<string | null>(null);
-const [sessions, setSessions] = useState<any[]>([]);
-const [currentTrack, setCurrentTrack] = useState(0);
-const [currentStep, setCurrentStep] = useState(0);
-const [problem, setProblem] = useState("");
-const [answers, setAnswers] = useState({ s: "", w: "", o: "", t: "" });
-
 type Msg = {
   id: string;
   role: Role;
@@ -32,6 +25,13 @@ type Msg = {
 };
 
 export default function ChatScreen() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [currentTrack, setCurrentTrack] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [problem, setProblem] = useState("");
+  const [answers, setAnswers] = useState({ s: "", w: "", o: "", t: "" });
+
   const navigation = useNavigation<any>();
 
   const [text, setText] = useState("");
@@ -57,12 +57,6 @@ export default function ChatScreen() {
   const addMessage = (role: Role, msgText: string) => {
     setMessages((prev) => [
       ...prev,
-      {
-        id: String(Date.now()) + Math.random(),
-        role,
-        text: msgText,
-        createdAt: Date.now(),
-      },
       {
         id: String(Date.now()) + Math.random(),
         role,

@@ -45,6 +45,7 @@ export async function generateSwotQuestions(
     PERSONALIZATION RULES:
     - If 'User Bio/Context' is provided, you MUST tailor the questions to their specific background, skills, or constraints when relevant.
     - Example: If the bio says "Student", the Opportunity question should focus on internships or learning.
+    - Make the question clear and coincise and in a human tone.
     Task: Generate 4 specific, probing questions (one for each SWOT quadrant).
     RETURN JSON MATCHING THIS EXACT STRUCTURE:
     {

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./admin";
+import { supabase } from "./supabaseClient";
 import type { UserProfile } from "../domain/services/analysis";
 
 /**
@@ -13,7 +13,7 @@ export async function fetchUserContext(
 
   try {
     // 2. Fetch all chunks
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("user_context_chunks")
       .select("content")
       .eq("user_id", userId);

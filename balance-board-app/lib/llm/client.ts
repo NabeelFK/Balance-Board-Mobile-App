@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 // 1. Initialize the Client
-const API_KEY = process.env.OPENAI_API_KEY;
+const API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 if (!API_KEY) {
   throw new Error("Missing OPENAI_API_KEY.");
 }

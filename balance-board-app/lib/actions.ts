@@ -1,5 +1,3 @@
-"use server";
-
 import { fetchUserContext } from "./db/context";
 import {
   generateSwotQuestions,
