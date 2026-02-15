@@ -390,11 +390,8 @@ const styles = StyleSheet.create({
   userText: { color: TEXT, fontWeight: "500" },
 
   outcomeWrap: {
-<<<<<<< HEAD
-=======
     paddingTop: 10,
     paddingHorizontal: 16,
->>>>>>> newtings
     paddingBottom: 6,
     alignItems: "center",
     gap: 6,
