@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import BalanceHeader from "../components/BalanceHeader";
 
 type Role = "user" | "assistant";
 
@@ -109,9 +110,11 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
+      
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
+      <BalanceHeader />
       {/* Header */}
       <View style={styles.header}>
         {/* ✅ Back button */}
@@ -119,11 +122,8 @@ export default function ChatScreen() {
           <Ionicons name="chevron-back" size={22} color={TEXT} />
         </Pressable>
 
-        <Text style={styles.logoText}>Balance</Text>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>?</Text>
         </View>
-      </View>
+
 
       {/* Messages */}
       <FlatList
