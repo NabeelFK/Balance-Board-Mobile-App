@@ -12,6 +12,8 @@ import {
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import BalanceHeader from "../components/BalanceHeader";
 
 type Role = "user" | "assistant";
 
@@ -30,6 +32,8 @@ type Msg = {
 };
 
 export default function ChatScreen() {
+  const navigation = useNavigation<any>();
+
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -59,11 +63,18 @@ export default function ChatScreen() {
         text: msgText,
         createdAt: Date.now(),
       },
+      {
+        id: String(Date.now()) + Math.random(),
+        role,
+        text: msgText,
+        createdAt: Date.now(),
+      },
     ]);
   };
 
   const send = async () => {
     if (!canSend) return;
+
     const clean = text.trim();
     addMessage("user", clean);
     setText("");
@@ -184,12 +195,17 @@ export default function ChatScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
+      <BalanceHeader />
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logoText}>Balance</Text>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>?</Text>
-        </View>
+        {/* ✅ Back button */}
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={22} color={TEXT} />
+        </Pressable>
       </View>
 
       {/* Messages */}
