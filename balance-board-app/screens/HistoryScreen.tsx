@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import BalanceHeader from "../components/BalanceHeader";
 import { useUser } from "@clerk/clerk-expo";
+import { useIsFocused } from "@react-navigation/native";
 
 // ✅ adjust if your supabaseClient location differs
 import { supabase } from "../lib/db/supabaseClient";
@@ -11,7 +12,7 @@ const TEXT = "#0A5E62";
 const MUTED = "#4F7F81";
 
 type Row = {
-  id: string;
+  id: number | string;
   user_id: string | null;
   problem: string;
   chosen_decision: string;
@@ -26,35 +27,30 @@ export default function HistoryScreen() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const isFocused = useIsFocused();
 
-    const load = async () => {
-      if (!user?.id) return;
+  const load = useCallback(async () => {
+    if (!user?.id) return;
 
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("decision_history")
-        .select("id,user_id,problem,chosen_decision,chosen_outcome,score,query_count,created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("decision_history")
+      .select("id,user_id,problem,chosen_decision,chosen_outcome,score,query_count,created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-      if (!mounted) return;
-
-      if (error) {
-        console.log("History read error:", error);
-        setRows([]);
-      } else {
-        setRows((data as any) || []);
-      }
-      setLoading(false);
-    };
-
-    load();
-    return () => {
-      mounted = false;
-    };
+    if (error) {
+      console.log("History read error:", error);
+      setRows([]);
+    } else {
+      setRows((data as any) || []);
+    }
+    setLoading(false);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (isFocused) load();
+  }, [isFocused, load]);
 
   return (
     <View style={styles.screen}>
@@ -68,8 +64,11 @@ export default function HistoryScreen() {
         ) : (
           <FlatList
             data={rows}
-            keyExtractor={(r) => r.id}
+            keyExtractor={(r) => String(r.id)}
             contentContainerStyle={{ paddingTop: 10, gap: 10, paddingBottom: 20 }}
+            showsVerticalScrollIndicator={true}
+            persistentScrollbar={true}
+            indicatorStyle="black"
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>{item.chosen_decision}</Text>

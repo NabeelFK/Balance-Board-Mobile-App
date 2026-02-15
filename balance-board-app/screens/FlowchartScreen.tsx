@@ -6,6 +6,7 @@ import BalanceHeader from "../components/BalanceHeader";
 
 // ✅ adjust if your supabaseClient location differs
 import { supabase } from "../lib/db/supabaseClient";
+import { saveDecision } from "../lib/db/saveDecision";
 
 const BG = "#DDF5F4";
 const TEXT = "#0A5E62";
@@ -34,45 +35,34 @@ const confirm = async () => {
   setSaving(true);
   setSaveError(null);
 
-  try {
-    const chosenOutcome = outcomes?.[chosenDecision]?.predicted_outcome ?? "";
+    try {
+      const chosenOutcome = outcomes?.[chosenDecision]?.predicted_outcome ?? "";
 
-    const payload = {
-      // IMPORTANT: your table uses id TEXT, so include one:
-      id: `${Date.now()}-${Math.random()}`,
+      const payload = {
+        user_id: user?.id ?? null,
+        problem: problem ?? "",
+        chosen_decision: chosenDecision,
+        chosen_outcome: chosenOutcome,
+        score: Math.max(0, 200 - 20 * (Number(queryCount) || 0)),
+        query_count: Number(queryCount) || 0,
+        details: { sessions, answersByDecision, outcomes },
+        created_at: new Date().toISOString(),
+      };
 
-      user_id: user?.id ?? null,
-      problem: problem ?? "",
-      chosen_decision: chosenDecision,
-      chosen_outcome: chosenOutcome,
-      score: Math.max(0, 200 - 20 * (Number(queryCount) || 0)),
-      query_count: Number(queryCount) || 0,
-      details: { sessions, answersByDecision, outcomes },
+      console.log("INSERT payload:", payload);
 
-      // only include this if your created_at DOES NOT have a default in Supabase
-      created_at: new Date().toISOString(),
-    };
+      const data = await saveDecision(payload);
 
-    console.log("INSERT payload:", payload);
+      console.log("INSERT result:", data, null);
 
-    const { data, error } = await supabase
-      .from("decision_history")
-      .insert(payload)
-      .select("id") // forces a response body
-      .single();
-
-    console.log("INSERT result:", data, error);
-
-    if (error) throw error;
-
-    // go to History tab
-    navigation.getParent()?.navigate("History");
-  } catch (e: any) {
-    console.log("CONFIRM ERROR:", e);
-    setSaveError(e?.message ?? "Failed to save");
-  } finally {
-    setSaving(false);
-  }
+      // go to History tab
+      navigation.getParent()?.navigate("History");
+    } catch (e: any) {
+      console.log("CONFIRM ERROR:", e);
+      setSaveError(e?.message ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
 };
 
   return (
