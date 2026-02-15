@@ -10,6 +10,11 @@ import type {
 } from "../types";
 import { generateStructured } from "../../llm/client";
 
+export interface UserProfile {
+  occupation?: string; // The raw bio text
+  risk_tolerance?: string; // 'LOW' | 'MEDIUM' | 'HIGH'
+}
+
 // --- SWOT question ---
 export const SWOT_ORDER = [
   "STRENGTH",
@@ -24,13 +29,23 @@ export const SWOT_ORDER = [
 export async function generateSwotQuestions(
   problem: string,
   decision: string,
+  userContext?: UserProfile,
 ): Promise<SwotQuestionnaire> {
+  //Load personal context
+  let contextBlock = `Problem: "${problem}"\nDecision: "${decision}"`;
+  if (userContext && userContext.occupation) {
+    contextBlock += `\nUser Bio/Context: "${userContext.occupation}"`;
+    if (userContext.risk_tolerance) {
+      contextBlock += `\nRisk Tolerance: ${userContext.risk_tolerance}`;
+    }
+  }
   const systemPrompt = `
     You are a Strategic Coach.
     Context: User has problem "${problem}" and is considering "${decision}".
-    
+    PERSONALIZATION RULES:
+    - If 'User Bio/Context' is provided, you MUST tailor the questions to their specific background, skills, or constraints when relevant.
+    - Example: If the bio says "Student", the Opportunity question should focus on internships or learning.
     Task: Generate 4 specific, probing questions (one for each SWOT quadrant).
-    
     RETURN JSON MATCHING THIS EXACT STRUCTURE:
     {
       "status": "VALID",
@@ -115,10 +130,16 @@ export async function simulateOutcome(
   problem: string,
   decision: string,
   answers: { s: string; w: string; o: string; t: string },
+  userContext?: UserProfile,
 ): Promise<SimulationResult> {
+  let userProfileStr = "Generic User";
+  if (userContext) {
+    userProfileStr = `Bio: ${userContext.occupation || "Unknown"}, Risk Tolerance: ${userContext.risk_tolerance || "MEDIUM"}`;
+  }
   const contextBlock = `
     Problem: ${problem}
     Decision: ${decision}
+    User Profile: ${userProfileStr}
     User's Analysis:
     - Strengths: ${answers.s}
     - Weaknesses: ${answers.w}
@@ -129,7 +150,8 @@ export async function simulateOutcome(
   const systemPrompt = `
     You are a Predictive Engine.
     Analyze the user's SWOT data.
-    
+    PERSONALIZATION RULES:
+    - Adjust the 'Probability' based on the User Profile. For example, if User is 'Low Risk Tolerance', highlight 'Safety' in the narrative.
     RETURN JSON MATCHING THIS EXACT STRUCTURE:
     {
       "status": "VALID",
