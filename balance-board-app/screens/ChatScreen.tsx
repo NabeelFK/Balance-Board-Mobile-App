@@ -24,45 +24,59 @@ type Msg = {
   createdAt: number;
 };
 
+const BG = "#DDF5F4";
+const TEXT = "#0A5E62";
+const MUTED = "#4F7F81";
+const CARD = "#CDEEEE";
+
 export default function ChatScreen() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const navigation = useNavigation<any>();
+
+  // Decision engine state
+  const [userId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [currentTrack, setCurrentTrack] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [problem, setProblem] = useState("");
-  const [answers, setAnswers] = useState({ s: "", w: "", o: "", t: "" });
 
-  const navigation = useNavigation<any>();
+  // answers stored per decision label (so flowchart can show both sides)
+  const [answersByDecision, setAnswersByDecision] = useState<
+    Record<string, { s: string; w: string; o: string; t: string }>
+  >({});
 
+  const [currentAnswers, setCurrentAnswers] = useState({ s: "", w: "", o: "", t: "" });
+
+  // outcomes stored per decision label
+  const [outcomesByDecision, setOutcomesByDecision] = useState<
+    Record<string, { predicted_outcome: string; probability?: number | null }>
+  >({});
+
+  // scoring
+  const [queryCount, setQueryCount] = useState(0);
+
+  // chat UI
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "m1",
       role: "assistant",
-      text: "Hi! Tell me what decision you’re trying to make.\n\nExample: “Should I study tonight or go to an event?”",
+      text:
+        "Hi! Tell me what decision you’re trying to make.\n\nExample: “Should I study tonight or go to an event?”",
       createdAt: Date.now(),
     },
   ]);
 
   const listRef = useRef<FlatList<Msg>>(null);
-
   const canSend = useMemo(() => text.trim().length > 0, [text]);
 
   const scrollToBottom = () => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    });
+    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   };
 
   const addMessage = (role: Role, msgText: string) => {
     setMessages((prev) => [
       ...prev,
-      {
-        id: String(Date.now()) + Math.random(),
-        role,
-        text: msgText,
-        createdAt: Date.now(),
-      },
+      { id: String(Date.now()) + Math.random(), role, text: msgText, createdAt: Date.now() },
     ]);
   };
 
@@ -74,87 +88,119 @@ export default function ChatScreen() {
     setText("");
     Keyboard.dismiss();
 
-    // PHASE 1: INITIALIZATION
+    // PHASE 1: Initialization (user describes the problem)
     if (sessions.length === 0) {
-      // WORKS WITH OR WITHOUT USERID
       const res = await startChat(userId, clean);
 
-      if (res.type === "SUCCESS" && res.sessions && res.sessions.length > 0) {
+      if (res?.type === "SUCCESS" && res.sessions?.length > 0) {
         setSessions(res.sessions);
-        setProblem(res.problem || "");
+        setProblem(res.problem || clean);
+
+        // initialize per-decision answers store
+        const initial: Record<string, { s: string; w: string; o: string; t: string }> = {};
+        res.sessions.forEach((s: any) => {
+          initial[s.decision] = { s: "", w: "", o: "", t: "" };
+        });
+        setAnswersByDecision(initial);
+
         addMessage("assistant", res.sessions[0].questions[0].text);
       } else {
-        addMessage("assistant", res.message || "I couldn't process that.");
+        addMessage("assistant", res?.message || "I couldn't process that.");
       }
+
       scrollToBottom();
       return;
     }
 
-    // PHASE 2: THE SWOT LOOP
-    const keys = ["s", "w", "o", "t"];
+    // PHASE 2: Question loop — count these as “queries spent deciding”
+    setQueryCount((c) => c + 1);
+
+    const keys = ["s", "w", "o", "t"] as const;
     const currentKey = keys[currentStep];
 
-    // Save answer
-    const newAnswers = { ...answers, [currentKey]: clean };
-    setAnswers(newAnswers);
+    const nextAnswers = { ...currentAnswers, [currentKey]: clean };
+    setCurrentAnswers(nextAnswers);
 
-    // Next Question or Completion Message
+    const decisionLabel = sessions[currentTrack]?.decision;
+
+    // also keep a copy per decision for flowchart
+    if (decisionLabel) {
+      setAnswersByDecision((prev) => ({
+        ...prev,
+        [decisionLabel]: nextAnswers,
+      }));
+    }
+
     if (currentStep < 3) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
 
-      const nextQ = sessions[currentTrack]?.questions[nextStep]?.text;
+      const nextQ = sessions[currentTrack]?.questions?.[nextStep]?.text;
       if (nextQ) addMessage("assistant", nextQ);
     } else {
       addMessage(
         "assistant",
-        `Analysis for "${sessions[currentTrack].decision}" complete. Tap 'Choose Outcome' below.`,
+        `Analysis for "${sessions[currentTrack]?.decision}" complete. Tap '🔮 Generate Outcome' below.`,
       );
     }
 
     scrollToBottom();
   };
 
-  // --- FUNCTION 2: THE OUTCOME HANDLER ---
+  const showGenerateOutcome =
+    sessions.length > 0 && currentStep === 3 && currentAnswers.t.trim().length > 0;
+
   const chooseOutcome = async () => {
-    if (!sessions[currentTrack]) return;
+    const session = sessions[currentTrack];
+    if (!session) return;
 
-    // 1. Get simulation
-    const sim = await getResults(
-      userId,
-      problem,
-      sessions[currentTrack].decision,
-      answers,
-    );
+    const sim = await getResults(userId, problem, session.decision, currentAnswers);
 
-    addMessage(
-      "assistant",
-      `Prediction for ${sessions[currentTrack].decision}:\n\n${sim.predicted_outcome}\n\nConfidence: ${sim.probability}%`,
-    );
+    const outcomeText = `Prediction for ${session.decision}:\n\n${sim.predicted_outcome}\n\nConfidence: ${sim.probability}%`;
 
-    // 2. QUEUE MANAGEMENT (Move to next decision if it exists)
+    addMessage("assistant", outcomeText);
+
+    // store outcome for flowchart
+    setOutcomesByDecision((prev) => ({
+      ...prev,
+      [session.decision]: {
+        predicted_outcome: sim.predicted_outcome,
+        probability: sim.probability ?? null,
+      },
+    }));
+
+    // go next track or finish
     if (currentTrack < sessions.length - 1) {
       const nextTrack = currentTrack + 1;
 
-      // Update state for the next track
       setCurrentTrack(nextTrack);
       setCurrentStep(0);
-      setAnswers({ s: "", w: "", o: "", t: "" });
+      setCurrentAnswers({ s: "", w: "", o: "", t: "" });
 
-      // Kickstart the next decision in the chat
       setTimeout(() => {
-        const firstQOfNextTrack = sessions[nextTrack].questions[0].text;
+        const firstQ = sessions[nextTrack]?.questions?.[0]?.text;
         addMessage(
           "assistant",
-          `Now let's analyze your next option: "${sessions[nextTrack].decision}"\n\n${firstQOfNextTrack}`,
+          `Now let's analyze your next option: "${sessions[nextTrack].decision}"\n\n${firstQ}`,
         );
         scrollToBottom();
-      }, 1500);
+      }, 700);
     } else {
-      addMessage(
-        "assistant",
-        "All decision tracks complete. I hope this helped!",
-      );
+      addMessage("assistant", "All decision tracks complete. I hope this helped!");
+
+      // ✅ Navigate to flowchart after final outcome is shown
+      setTimeout(() => {
+        navigation.navigate("Flowchart", {
+          problem,
+          sessions,
+          answersByDecision,
+          outcomes: {
+            ...outcomesByDecision,
+            [session.decision]: { predicted_outcome: sim.predicted_outcome, probability: sim.probability ?? null },
+          },
+          queryCount,
+        });
+      }, 600);
     }
 
     scrollToBottom();
@@ -164,18 +210,8 @@ export default function ChatScreen() {
     const isUser = item.role === "user";
     return (
       <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
-        <View
-          style={[
-            styles.bubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-        >
-          <Text
-            style={[
-              styles.bubbleText,
-              isUser ? styles.userText : styles.assistantText,
-            ]}
-          >
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+          <Text style={[styles.bubbleText, isUser ? styles.userText : styles.assistantText]}>
             {item.text}
           </Text>
         </View>
@@ -190,19 +226,14 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
       <BalanceHeader />
-      {/* Header */}
-      <View style={styles.header}>
-        {/* ✅ Back button */}
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          hitSlop={10}
-        >
+
+      {/* Back button row (uses BalanceHeader visually, but still gives you a back action) */}
+      <View style={styles.backRow}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={TEXT} />
         </Pressable>
       </View>
 
-      {/* Messages */}
       <FlatList
         ref={listRef}
         data={messages}
@@ -214,8 +245,7 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="handled"
       />
 
-      {/* Choose outcome button */}
-      {sessions.length > 0 && currentStep === 3 && answers.t !== "" && (
+      {showGenerateOutcome && (
         <View style={styles.outcomeWrap}>
           <Pressable
             onPress={chooseOutcome}
@@ -232,7 +262,6 @@ export default function ChatScreen() {
         </View>
       )}
 
-      {/* Composer */}
       <View style={styles.composerWrap}>
         <View style={styles.composer}>
           <TextInput
@@ -261,46 +290,22 @@ export default function ChatScreen() {
   );
 }
 
-const BG = "#DDF5F4";
-const TEXT = "#0A5E62";
-const MUTED = "#4F7F81";
-const CARD = "#CDEEEE";
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
 
-  header: {
-    paddingTop: 28,
-    paddingHorizontal: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: TEXT,
-    letterSpacing: 0.3,
-  },
-  logoBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-    backgroundColor: "#9EE3E0",
-    alignItems: "center",
+  backRow: {
+    height: 38,
     justifyContent: "center",
   },
-  logoBadgeText: {
-    color: TEXT,
-    fontWeight: "800",
-    fontSize: 12,
-    marginTop: -1,
+  backBtn: {
+    position: "absolute",
+    left: 12,
+    padding: 10,
   },
 
   listContent: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 10,
     gap: 10,
   },
@@ -317,14 +322,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
-  assistantBubble: {
-    backgroundColor: CARD,
-    borderColor: "#A7DEDB",
-  },
-  userBubble: {
-    backgroundColor: "#BFEDEB",
-    borderColor: "#9ADDD9",
-  },
+  assistantBubble: { backgroundColor: CARD, borderColor: "#A7DEDB" },
+  userBubble: { backgroundColor: "#BFEDEB", borderColor: "#9ADDD9" },
 
   bubbleText: { fontSize: 13, lineHeight: 18 },
   assistantText: { color: MUTED },
@@ -342,13 +341,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 14,
   },
-  outcomeText: { color: "white", fontWeight: "700" },
-  outcomeHint: { fontSize: 11, color: MUTED },
+  outcomeText: { color: "white", fontWeight: "800" },
+  outcomeHint: { fontSize: 11, color: MUTED, textAlign: "center" },
 
-  composerWrap: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
+  composerWrap: { paddingHorizontal: 16, paddingBottom: 14 },
   composer: {
     flexDirection: "row",
     alignItems: "center",
@@ -361,7 +357,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   input: { flex: 1, fontSize: 14, color: TEXT },
-
   sendBtn: {
     width: 36,
     height: 36,
@@ -369,11 +364,5 @@ const styles = StyleSheet.create({
     backgroundColor: TEXT,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backBtn: {
-    position: "absolute",
-    left: 16,
-    top: 32, // Adjust based on your header height
-    padding: 8,
   },
 });

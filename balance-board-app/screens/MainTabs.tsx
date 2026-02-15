@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
-import NewStack from "./NewStack"; // ✅ use the stack, not NewScreen
+import NewStack from "./NewStack";
 import HistoryScreen from "./HistoryScreen";
 import Progress from "./Progress";
 import ProfileScreen from "./ProfileScreen";
@@ -44,9 +44,8 @@ export default function MainTabs() {
         },
       })}
     >
-      {/* ✅ IMPORTANT: New tab must use the stack */}
+      {/* ✅ IMPORTANT: Use NewStack here */}
       <Tab.Screen name="New" component={NewStack} />
-
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Progress" component={Progress} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
