@@ -1,6 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+export function createClerkSupabaseClient(
+  getToken: () => Promise<string | null>
+) {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      fetch: async (url, options: RequestInit = {}) => {
+        const token = await getToken();
+
+        const headers = new Headers(options.headers);
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+
+        return fetch(url, { ...options, headers });
+      },
+    },
+  });
+}
