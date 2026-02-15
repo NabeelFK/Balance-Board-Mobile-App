@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { startChat, getResults } from "../lib/actions";
 import {
   View,
   Text,
@@ -14,6 +15,13 @@ import { Ionicons } from "@expo/vector-icons";
 
 type Role = "user" | "assistant";
 
+const [userId, setUserId] = useState<string | null>(null);
+const [sessions, setSessions] = useState<any[]>([]);
+const [currentTrack, setCurrentTrack] = useState(0);
+const [currentStep, setCurrentStep] = useState(0);
+const [problem, setProblem] = useState("");
+const [answers, setAnswers] = useState({ s: "", w: "", o: "", t: "" });
+
 type Msg = {
   id: string;
   role: Role;
@@ -27,8 +35,7 @@ export default function ChatScreen() {
     {
       id: "m1",
       role: "assistant",
-      text:
-        "Hi! Tell me what decision you’re trying to make.\n\nExample: “Should I study tonight or go to an event?”",
+      text: "Hi! Tell me what decision you’re trying to make.\n\nExample: “Should I study tonight or go to an event?”",
       createdAt: Date.now(),
     },
   ]);
@@ -46,43 +53,105 @@ export default function ChatScreen() {
   const addMessage = (role: Role, msgText: string) => {
     setMessages((prev) => [
       ...prev,
-      { id: String(Date.now()) + Math.random(), role, text: msgText, createdAt: Date.now() },
+      {
+        id: String(Date.now()) + Math.random(),
+        role,
+        text: msgText,
+        createdAt: Date.now(),
+      },
     ]);
   };
 
-  const fakeAssistantReply = (userText: string) => {
-    // Replace this later with real AI response or decision-tree logic
-    if (userText.toLowerCase().includes("study")) {
-      return (
-        "Let’s structure it.\n\n1) What’s the deadline/urgency?\n2) What do you gain from the event?\n3) If you go, how much studying can you still do after?\n\nAnswer those and I’ll suggest an outcome."
-      );
-    }
-    return "Got it. What are the top 2 options you’re choosing between?";
-  };
-
-  const send = () => {
+  const send = async () => {
     if (!canSend) return;
     const clean = text.trim();
-
     addMessage("user", clean);
     setText("");
     Keyboard.dismiss();
 
-    // simulate assistant response
-    setTimeout(() => {
-      addMessage("assistant", fakeAssistantReply(clean));
+    // PHASE 1: INITIALIZATION
+    if (sessions.length === 0) {
+      // WORKS WITH OR WITHOUT USERID
+      const res = await startChat(userId, clean);
+
+      if (res.type === "SUCCESS" && res.sessions && res.sessions.length > 0) {
+        setSessions(res.sessions);
+        setProblem(res.problem || "");
+        addMessage("assistant", res.sessions[0].questions[0].text);
+      } else {
+        addMessage("assistant", res.message || "I couldn't process that.");
+      }
       scrollToBottom();
-    }, 400);
+      return;
+    }
+
+    // PHASE 2: THE SWOT LOOP
+    const keys = ["s", "w", "o", "t"];
+    const currentKey = keys[currentStep];
+
+    // Save answer
+    const newAnswers = { ...answers, [currentKey]: clean };
+    setAnswers(newAnswers);
+
+    // Next Question or Completion Message
+    if (currentStep < 3) {
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+
+      const nextQ = sessions[currentTrack]?.questions[nextStep]?.text;
+      if (nextQ) addMessage("assistant", nextQ);
+    } else {
+      addMessage(
+        "assistant",
+        `Analysis for "${sessions[currentTrack].decision}" complete. Tap 'Choose Outcome' below.`,
+      );
+    }
 
     scrollToBottom();
   };
 
-  // Show “Choose outcome” when conversation is long enough (simple demo rule)
-  const showChooseOutcome = messages.length >= 6;
+  // --- FUNCTION 2: THE OUTCOME HANDLER ---
+  const chooseOutcome = async () => {
+    if (!sessions[currentTrack]) return;
 
-  const chooseOutcome = () => {
-    // TODO: navigate to outcome screen OR open modal
-    addMessage("assistant", "✅ Outcome chosen. I can summarize your decision + next steps.");
+    // 1. Get simulation
+    const sim = await getResults(
+      userId,
+      problem,
+      sessions[currentTrack].decision,
+      answers,
+    );
+
+    addMessage(
+      "assistant",
+      `Prediction for ${sessions[currentTrack].decision}:\n\n${sim.predicted_outcome}\n\nConfidence: ${sim.probability}%`,
+    );
+
+    // 2. QUEUE MANAGEMENT (Move to next decision if it exists)
+    if (currentTrack < sessions.length - 1) {
+      const nextTrack = currentTrack + 1;
+
+      // Update state for the next track
+      setCurrentTrack(nextTrack);
+      setCurrentStep(0);
+      setAnswers({ s: "", w: "", o: "", t: "" });
+
+      // Kickstart the next decision in the chat
+      setTimeout(() => {
+        const firstQOfNextTrack = sessions[nextTrack].questions[0].text;
+        addMessage(
+          "assistant",
+          `Now let's analyze your next option: "${sessions[nextTrack].decision}"\n\n${firstQOfNextTrack}`,
+        );
+        scrollToBottom();
+      }, 1500);
+    } else {
+      addMessage(
+        "assistant",
+        "All decision tracks complete. I hope this helped!",
+      );
+    }
+
     scrollToBottom();
   };
 
@@ -90,8 +159,18 @@ export default function ChatScreen() {
     const isUser = item.role === "user";
     return (
       <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
-        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-          <Text style={[styles.bubbleText, isUser ? styles.userText : styles.assistantText]}>
+        <View
+          style={[
+            styles.bubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+          ]}
+        >
+          <Text
+            style={[
+              styles.bubbleText,
+              isUser ? styles.userText : styles.assistantText,
+            ]}
+          >
             {item.text}
           </Text>
         </View>
@@ -128,10 +207,18 @@ export default function ChatScreen() {
       {/* Choose outcome button */}
       {showChooseOutcome && (
         <View style={styles.outcomeWrap}>
-          <Pressable onPress={chooseOutcome} style={({ pressed }) => [styles.outcomeBtn, pressed && { opacity: 0.85 }]}>
+          <Pressable
+            onPress={chooseOutcome}
+            style={({ pressed }) => [
+              styles.outcomeBtn,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
             <Text style={styles.outcomeText}>Choose outcome</Text>
           </Pressable>
-          <Text style={styles.outcomeHint}>(Need more help? keep chatting)</Text>
+          <Text style={styles.outcomeHint}>
+            (Need more help? keep chatting)
+          </Text>
         </View>
       )}
 
@@ -180,7 +267,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  logoText: { fontSize: 20, fontWeight: "700", color: TEXT, letterSpacing: 0.3 },
+  logoText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: TEXT,
+    letterSpacing: 0.3,
+  },
   logoBadge: {
     width: 18,
     height: 18,
@@ -189,7 +281,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoBadgeText: { color: TEXT, fontWeight: "800", fontSize: 12, marginTop: -1 },
+  logoBadgeText: {
+    color: TEXT,
+    fontWeight: "800",
+    fontSize: 12,
+    marginTop: -1,
+  },
 
   listContent: {
     paddingHorizontal: 16,
@@ -264,4 +361,3 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
-
