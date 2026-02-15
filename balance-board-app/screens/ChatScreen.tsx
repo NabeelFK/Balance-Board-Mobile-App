@@ -44,7 +44,12 @@ export default function ChatScreen() {
     Record<string, { s: string; w: string; o: string; t: string }>
   >({});
 
-  const [currentAnswers, setCurrentAnswers] = useState({ s: "", w: "", o: "", t: "" });
+  const [currentAnswers, setCurrentAnswers] = useState({
+    s: "",
+    w: "",
+    o: "",
+    t: "",
+  });
 
   // outcomes stored per decision label
   const [outcomesByDecision, setOutcomesByDecision] = useState<
@@ -70,13 +75,20 @@ export default function ChatScreen() {
   const canSend = useMemo(() => text.trim().length > 0, [text]);
 
   const scrollToBottom = () => {
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    requestAnimationFrame(() =>
+      listRef.current?.scrollToEnd({ animated: true }),
+    );
   };
 
   const addMessage = (role: Role, msgText: string) => {
     setMessages((prev) => [
       ...prev,
-      { id: String(Date.now()) + Math.random(), role, text: msgText, createdAt: Date.now() },
+      {
+        id: String(Date.now()) + Math.random(),
+        role,
+        text: msgText,
+        createdAt: Date.now(),
+      },
     ]);
   };
 
@@ -97,7 +109,10 @@ export default function ChatScreen() {
         setProblem(res.problem || clean);
 
         // initialize per-decision answers store
-        const initial: Record<string, { s: string; w: string; o: string; t: string }> = {};
+        const initial: Record<
+          string,
+          { s: string; w: string; o: string; t: string }
+        > = {};
         res.sessions.forEach((s: any) => {
           initial[s.decision] = { s: "", w: "", o: "", t: "" };
         });
@@ -148,7 +163,9 @@ export default function ChatScreen() {
   };
 
   const showGenerateOutcome =
-    sessions.length > 0 && currentStep === 3 && currentAnswers.t.trim().length > 0;
+    sessions.length > 0 &&
+    currentStep === 3 &&
+    currentAnswers.t.trim().length > 0;
 
   const chooseOutcome = async () => {
     const session = sessions[currentTrack];
@@ -196,7 +213,10 @@ export default function ChatScreen() {
           answersByDecision,
           outcomes: {
             ...outcomesByDecision,
-            [session.decision]: { predicted_outcome: sim.predicted_outcome, probability: sim.probability ?? null },
+            [session.decision]: {
+              predicted_outcome: sim.predicted_outcome,
+              probability: sim.probability ?? null,
+            },
           },
           queryCount,
         });
@@ -210,8 +230,18 @@ export default function ChatScreen() {
     const isUser = item.role === "user";
     return (
       <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
-        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-          <Text style={[styles.bubbleText, isUser ? styles.userText : styles.assistantText]}>
+        <View
+          style={[
+            styles.bubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+          ]}
+        >
+          <Text
+            style={[
+              styles.bubbleText,
+              isUser ? styles.userText : styles.assistantText,
+            ]}
+          >
             {item.text}
           </Text>
         </View>
@@ -223,13 +253,21 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+
     >
       <BalanceHeader />
 
       {/* Back button row (uses BalanceHeader visually, but still gives you a back action) */}
       <View style={styles.backRow}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
+        <Pressable
+          onPress={() => {
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate("NewHome"); // <-- change if your route name is different
+          }}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={22} color={TEXT} />
         </Pressable>
       </View>
@@ -304,11 +342,11 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
-    gap: 10,
-  },
+  paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 10, // was 110
+  gap: 10,
+},
 
   row: { width: "100%", flexDirection: "row" },
   rowLeft: { justifyContent: "flex-start" },
@@ -344,7 +382,7 @@ const styles = StyleSheet.create({
   outcomeText: { color: "white", fontWeight: "800" },
   outcomeHint: { fontSize: 11, color: MUTED, textAlign: "center" },
 
-  composerWrap: { paddingHorizontal: 16, paddingBottom: 14 },
+  composerWrap: { paddingHorizontal: 16, paddingBottom: 90 },
   composer: {
     flexDirection: "row",
     alignItems: "center",

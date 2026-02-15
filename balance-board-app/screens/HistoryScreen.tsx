@@ -54,34 +54,40 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.screen}>
-      <BalanceHeader />
-      <View style={styles.content}>
-        <Text style={styles.title}>History</Text>
-        {loading ? (
-          <Text style={styles.sub}>Loading…</Text>
-        ) : rows.length === 0 ? (
-          <Text style={styles.sub}>No saved decisions yet.</Text>
-        ) : (
-          <FlatList
-            data={rows}
-            keyExtractor={(r) => String(r.id)}
-            contentContainerStyle={{ paddingTop: 10, gap: 10, paddingBottom: 20 }}
-            showsVerticalScrollIndicator={true}
-            persistentScrollbar={true}
-            indicatorStyle="black"
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{item.chosen_decision}</Text>
-                <Text style={styles.cardProblem}>{item.problem}</Text>
-                <Text style={styles.cardOutcome}>{item.chosen_outcome}</Text>
-                <Text style={styles.meta}>
-                  Score: +{item.score} • Queries: {item.query_count}
-                </Text>
-              </View>
-            )}
-          />
+      <FlatList
+        data={rows}
+        keyExtractor={(r) => String(r.id)}
+        contentContainerStyle={{ paddingBottom: 90 }}
+        showsVerticalScrollIndicator={true}
+        persistentScrollbar={true}
+        indicatorStyle="black"
+        ListHeaderComponent={() => (
+          <>
+            <BalanceHeader />
+            <View style={styles.content}>
+              <Text style={styles.title}>History</Text>
+              {loading && <Text style={styles.sub}>Loading…</Text>}
+            </View>
+          </>
         )}
-      </View>
+        ListEmptyComponent={() =>
+          !loading ? (
+            <View style={styles.content}>
+              <Text style={styles.sub}>No saved decisions yet.</Text>
+            </View>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <View style={[styles.content, { paddingTop: 0, paddingBottom: 0 }]}> 
+            <View style={styles.cardWithGap}>
+              <Text style={styles.cardTitle}>{item.chosen_decision}</Text>
+              <Text style={styles.cardProblem}>{item.problem}</Text>
+              <Text style={styles.cardOutcome}>{item.chosen_outcome}</Text>
+              <Text style={styles.meta}>Score: +{item.score} • Queries: {item.query_count}</Text>
+            </View>
+          </View>
+        )}
+      />
     </View>
   );
 }
@@ -98,6 +104,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: "#A7DEDB",
+  },
+  cardWithGap: {
+    backgroundColor: "#CDEEEE",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#A7DEDB",
+    marginBottom: 18,
   },
   cardTitle: { color: TEXT, fontWeight: "900", marginBottom: 6 },
   cardProblem: { color: MUTED, fontSize: 12, marginBottom: 8 },

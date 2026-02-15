@@ -5,8 +5,8 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  FlatList,
   Image,
+  ScrollView,
 } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useUser } from "@clerk/clerk-expo";
@@ -22,6 +22,24 @@ type LeaderRow = {
   coins: number; // kept in type because RPC returns it, but we won’t display it
   created_at: string;
 };
+
+function normalizeName(s: unknown): string | null {
+  if (typeof s !== "string") return null;
+  const cleaned = s.trim().replace(/\s+/g, " ");
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
+function looksLikeEmail(s: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
+
+function emailLocalPart(email?: string | null) {
+  if (!email) return null;
+  const at = email.indexOf("@");
+  if (at <= 0) return null;
+  const local = email.slice(0, at).trim();
+  return local.length >= 2 ? local : null;
+}
 
 export default function Progress() {
   const supabase = useSupabase();
@@ -44,16 +62,43 @@ export default function Progress() {
   useEffect(() => {
     let cancelled = false;
 
-    async function ensureProfile() {
+    async function ensureProfile(attempt = 0) {
       if (!clerkUserId) return;
 
       setLoadingProfile(true);
       try {
-        const displayName =
-          user?.fullName ||
-          user?.firstName ||
-          user?.primaryEmailAddress?.emailAddress ||
+        const metaPublic = normalizeName((user as any)?.publicMetadata?.display_name);
+        const metaUnsafe = normalizeName((user as any)?.unsafeMetadata?.display_name);
+
+        const fullName = normalizeName(user?.fullName);
+        const firstName = normalizeName(user?.firstName);
+        const username = normalizeName(user?.username);
+
+        const email = user?.primaryEmailAddress?.emailAddress ?? null;
+
+        // Prefer real names + metadata before anything else
+        let displayName =
+          fullName ||
+          firstName ||
+          metaUnsafe ||
+          metaPublic ||
+          username ||
+          emailLocalPart(email) ||
           "Anonymous";
+
+        // Safety: never store email as display name
+        if (looksLikeEmail(displayName)) {
+          displayName = username || emailLocalPart(email) || "Anonymous";
+        }
+
+        const metaPresent = !!(metaPublic || metaUnsafe);
+
+        // If we don't have metadata and the name seems "email-ish" or weak right after signup,
+        // retry briefly (race condition right after sign up)
+        if (!metaPresent && attempt < 3 && (displayName.includes("@") || displayName === "Anonymous")) {
+          setTimeout(() => ensureProfile(attempt + 1), 600);
+          return;
+        }
 
         const { data, error } = await supabase
           .from("profiles")
@@ -147,7 +192,7 @@ export default function Progress() {
     <View style={styles.screen}>
       <BalanceHeader />
 
-      <View style={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.placeholderTitle}>Progress</Text>
 
         {loadingProfile ? (
@@ -187,16 +232,14 @@ export default function Progress() {
         {loadingBoard ? (
           <ActivityIndicator />
         ) : (
-          <FlatList
-            data={leaderboard}
-            keyExtractor={(item) => item.profile_id}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            renderItem={({ item, index }) => {
+          <View style={{ paddingBottom: 24 }}>
+            {leaderboard.map((item, index) => {
               const isMe = item.clerk_user_id === clerkUserId;
               const initial = (item.display_name?.[0] || "U").toUpperCase();
+              const itemLevel = Math.floor((Number(item.xp ?? 0)) / 100) + 1;
 
               return (
-                <View style={[styles.row, isMe && styles.rowMe]}>
+                <View key={item.profile_id} style={[styles.row, isMe && styles.rowMe]}>
                   <Text style={[styles.rank, isMe && styles.rankMe]}>#{index + 1}</Text>
 
                   <View style={styles.avatarWrap}>
@@ -211,14 +254,14 @@ export default function Progress() {
                     <Text style={[styles.name, isMe && styles.nameMe]} numberOfLines={1}>
                       {item.display_name}
                     </Text>
-                    <Text style={styles.small}>XP {item.xp}</Text>
+                    <Text style={styles.small}>Level {itemLevel}</Text>
                   </View>
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -230,7 +273,8 @@ const CARD = "#CDEEEE";
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
-  content: { flex: 1, paddingHorizontal: 26, paddingTop: 18 },
+  scroll: { flex: 1 },
+  contentContainer: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 140 },
 
   placeholderTitle: { fontSize: 20, fontWeight: "800", color: TEXT, marginBottom: 10 },
 

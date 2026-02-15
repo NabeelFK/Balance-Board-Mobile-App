@@ -34,20 +34,47 @@ export default function NewScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
-  content: { flex: 1, paddingHorizontal: 26, paddingTop: 22 },
-  title: { fontSize: 32, lineHeight: 38, fontWeight: "700", color: TEXT, marginBottom: 10 },
-  sub: { fontSize: 14, color: MUTED, marginBottom: 18 },
+
+  content: {
+    flex: 1,
+    paddingHorizontal: 26,
+    paddingTop: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 48,
+  },
+
+  title: {
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "800",
+    color: TEXT,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+
+  sub: {
+    fontSize: 15,
+    color: MUTED,
+    marginBottom: 18,
+    textAlign: "center",
+  },
 
   btn: {
-    alignSelf: "flex-start",
     backgroundColor: TEXT,
     paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    paddingVertical: 16,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    maxWidth: 520,
+    marginTop: 18,
   },
-  btnText: { color: "white", fontWeight: "800", fontSize: 16 },
+
+  btnText: {
+    color: "white",
+    fontWeight: "800",
+    fontSize: 18,
+  },
 });
