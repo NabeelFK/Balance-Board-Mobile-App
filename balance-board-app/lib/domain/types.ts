@@ -4,7 +4,7 @@ import {
   SwotQuestionnaireSchema,
   SimulationSchema,
   HesitationAnalysisSchema,
-  SwotAnswerValidationSchema, // <--- Make sure this is imported
+  SwotAnswerValidationSchema,
 } from "./schemas";
 
 // --- 1. INPUT PARSING TYPES ---
@@ -43,7 +43,7 @@ export function isValidHesitation(
   return hes.status === "VALID";
 }
 
-// --- 5. ANSWER VALIDATION TYPES (NEW) ---
+// --- 5. ANSWER VALIDATION TYPES ---
 export type SwotAnswerValidation = z.infer<typeof SwotAnswerValidationSchema>;
 
 export function isValidAnswer(
