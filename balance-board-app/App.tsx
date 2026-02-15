@@ -9,6 +9,7 @@ import { SupabaseProvider } from "./providers/SupabaseProvider";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import MainTabs from "./screens/MainTabs";
+import { ScrollView, RefreshControl, Text } from 'react-native';
 
 const tokenCache = {
   async getToken(key: string) {
