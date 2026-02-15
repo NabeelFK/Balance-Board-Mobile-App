@@ -9,26 +9,24 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useClerk, useUser, useAuth } from "@clerk/clerk-expo";
+import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-
 import { useSupabase } from "../providers/SupabaseProvider";
-
-
 
 type Tab = "New" | "History" | "Progress" | "Profile";
 
 export default function HomeScreen() {
-
   const supabase = useSupabase();
-
   const { signOut } = useClerk();
   const { user } = useUser();
-  const { getToken } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("New");
   const [prompt, setPrompt] = useState("");
+
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [xp, setXp] = useState<number>(0);
+  const [coins, setCoins] = useState<number>(0);
 
   const canStart = useMemo(() => prompt.trim().length > 0, [prompt]);
 
@@ -45,65 +43,54 @@ export default function HomeScreen() {
 
   const handleStart = () => {
     if (!canStart) return;
-    // TODO: navigate to your decision flow screen
-    // navigation.navigate("Chat", { prompt })
     console.log("Start decision with:", prompt);
   };
 
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [xp, setXp] = useState<number>(0);
-  const [coins, setCoins] = useState<number>(0);
-  
+  // ✅ 1) test connection once
   useEffect(() => {
-  async function testConnection() {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .limit(1);
-
-    console.log("SUPABASE TEST DATA:", data);
-    console.log("SUPABASE TEST ERROR:", error);
-  }
-
-  useEffect(() => {
-  async function ensureProfile() {
-    if (!user?.id) return;
-
-    const displayName =
-      user.fullName ||
-      user.firstName ||
-      user.primaryEmailAddress?.emailAddress ||
-      "Anonymous";
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          clerk_user_id: user.id,
-          display_name: displayName,
-          avatar_url: user.imageUrl ?? null,
-        },
-        { onConflict: "clerk_user_id" }
-      )
-      .select("id, xp, coins")
-      .single();
-
-    console.log("UPSERT PROFILE:", data, error);
-
-    if (!error && data) {
-      setProfileId(data.id);
-      setXp(Number(data.xp ?? 0));
-      setCoins(Number(data.coins ?? 0));
+    async function testConnection() {
+      const { data, error } = await supabase.from("profiles").select("*").limit(1);
+      console.log("SUPABASE TEST DATA:", data);
+      console.log("SUPABASE TEST ERROR:", error);
     }
-  }
+    testConnection();
+  }, [supabase]);
 
-  ensureProfile();
-}, [user?.id]);
+  // ✅ 2) ensure profile when user is loaded
+  useEffect(() => {
+    async function ensureProfile() {
+      if (!user?.id) return;
 
+      const displayName =
+        user.fullName ||
+        user.firstName ||
+        user.primaryEmailAddress?.emailAddress ||
+        "Anonymous";
 
-  testConnection();
-}, []);
+      const { data, error } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            clerk_user_id: user.id,
+            display_name: displayName,
+            avatar_url: user.imageUrl ?? null,
+          },
+          { onConflict: "clerk_user_id" }
+        )
+        .select("id, xp, coins")
+        .single();
 
+      console.log("UPSERT PROFILE:", data, error);
+
+      if (!error && data) {
+        setProfileId(data.id);
+        setXp(Number(data.xp ?? 0));
+        setCoins(Number(data.coins ?? 0));
+      }
+    }
+
+    ensureProfile();
+  }, [user?.id, supabase]);
 
   return (
     <KeyboardAvoidingView
@@ -146,6 +133,13 @@ export default function HomeScreen() {
             >
               <Text style={styles.primaryButtonText}>Start</Text>
             </Pressable>
+
+            {/* tiny debug display */}
+            <View style={{ marginTop: 14 }}>
+              <Text style={{ color: MUTED, fontSize: 12 }}>
+                profileId: {profileId ?? "null"} • xp: {xp} • coins: {coins}
+              </Text>
+            </View>
           </>
         )}
 
@@ -190,30 +184,10 @@ export default function HomeScreen() {
 
       {/* Bottom nav */}
       <View style={styles.bottomNav}>
-        <TabItem
-          label="New"
-          icon="sparkles-outline"
-          active={activeTab === "New"}
-          onPress={() => setActiveTab("New")}
-        />
-        <TabItem
-          label="History"
-          icon="time-outline"
-          active={activeTab === "History"}
-          onPress={() => setActiveTab("History")}
-        />
-        <TabItem
-          label="Progress"
-          icon="trending-up-outline"
-          active={activeTab === "Progress"}
-          onPress={() => setActiveTab("Progress")}
-        />
-        <TabItem
-          label="Profile"
-          icon="person-outline"
-          active={activeTab === "Profile"}
-          onPress={() => setActiveTab("Profile")}
-        />
+        <TabItem label="New" icon="sparkles-outline" active={activeTab === "New"} onPress={() => setActiveTab("New")} />
+        <TabItem label="History" icon="time-outline" active={activeTab === "History"} onPress={() => setActiveTab("History")} />
+        <TabItem label="Progress" icon="trending-up-outline" active={activeTab === "Progress"} onPress={() => setActiveTab("Progress")} />
+        <TabItem label="Profile" icon="person-outline" active={activeTab === "Profile"} onPress={() => setActiveTab("Profile")} />
       </View>
     </KeyboardAvoidingView>
   );

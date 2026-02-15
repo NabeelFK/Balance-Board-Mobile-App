@@ -6,15 +6,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Image,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useClerk, useUser } from "@clerk/clerk-expo";
 import * as Crypto from "expo-crypto";
+import { useUser } from "@clerk/clerk-expo";
 import { useSupabase } from "../providers/SupabaseProvider";
-
-type Tab = "New" | "History" | "Progress" | "Profile";
+import BalanceHeader from "../components/BalanceHeader";
 
 type LeaderRow = {
   profile_id: string;
@@ -22,33 +19,28 @@ type LeaderRow = {
   display_name: string;
   avatar_url: string | null;
   xp: number;
-  coins: number;
+  coins: number; // kept in type because RPC returns it, but we won’t display it
   created_at: string;
 };
 
 export default function Progress() {
   const supabase = useSupabase();
-  const { signOut } = useClerk();
   const { user } = useUser();
 
-  const [activeTab, setActiveTab] = useState<Tab>("Progress");
-
-  // profile
   const [profileId, setProfileId] = useState<string | null>(null);
   const [xp, setXp] = useState<number>(0);
-  const [coins, setCoins] = useState<number>(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  // leaderboard
   const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([]);
   const [loadingBoard, setLoadingBoard] = useState(true);
 
-  // profile tab signout loading
-  const [signingOut, setSigningOut] = useState(false);
-
   const clerkUserId = user?.id ?? null;
 
-  // 1) Ensure profile exists (UPSERT)
+  const level = useMemo(() => Math.floor(xp / 100) + 1, [xp]);
+  const progress01 = useMemo(() => (xp % 100) / 100, [xp]);
+  const xpIntoLevel = useMemo(() => xp % 100, [xp]);
+
+  // Ensure profile exists
   useEffect(() => {
     let cancelled = false;
 
@@ -73,7 +65,7 @@ export default function Progress() {
             },
             { onConflict: "clerk_user_id" }
           )
-          .select("id, xp, coins")
+          .select("id, xp")
           .single();
 
         if (error) throw error;
@@ -81,7 +73,6 @@ export default function Progress() {
         if (!cancelled && data) {
           setProfileId(data.id);
           setXp(Number(data.xp ?? 0));
-          setCoins(Number(data.coins ?? 0));
         }
       } catch (e) {
         console.error("ensureProfile error:", e);
@@ -96,7 +87,6 @@ export default function Progress() {
     };
   }, [clerkUserId, supabase, user]);
 
-  // 2) Fetch leaderboard
   const fetchLeaderboard = async () => {
     setLoadingBoard(true);
     try {
@@ -104,8 +94,8 @@ export default function Progress() {
         p_limit: 25,
         p_offset: 0,
       });
-
       if (error) throw error;
+
       setLeaderboard((data as LeaderRow[]) ?? []);
     } catch (e) {
       console.error("fetchLeaderboard error:", e);
@@ -120,16 +110,14 @@ export default function Progress() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId]);
 
-  // 3) Award XP/coins demo (call your RPC)
+  // Test XP award (no coins shown)
   const awardDemo = async () => {
     if (!profileId) return;
 
     const gainXp = 10;
-    const gainCoins = 2;
 
     // optimistic
     setXp((v) => v + gainXp);
-    setCoins((v) => v + gainCoins);
 
     try {
       const txId = Crypto.randomUUID();
@@ -138,7 +126,7 @@ export default function Progress() {
         p_profile_id: profileId,
         p_client_tx_id: txId,
         p_amount_xp: gainXp,
-        p_amount_coins: gainCoins,
+        p_amount_coins: 0,
         p_reason: "decision_completed",
         p_decision_id: null,
       });
@@ -147,79 +135,18 @@ export default function Progress() {
 
       const row = Array.isArray(data) ? data[0] : data;
       if (row?.new_xp != null) setXp(Number(row.new_xp));
-      if (row?.new_coins != null) setCoins(Number(row.new_coins));
 
       fetchLeaderboard();
     } catch (e) {
       console.error("award_xp error:", e);
-      // revert optimistic
       setXp((v) => v - gainXp);
-      setCoins((v) => v - gainCoins);
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      setSigningOut(true);
-      await signOut();
-    } catch (e) {
-      console.error("signOut error:", e);
-    } finally {
-      setSigningOut(false);
-    }
-  };
+  return (
+    <View style={styles.screen}>
+      <BalanceHeader />
 
-  const content = useMemo(() => {
-    if (activeTab === "New") {
-      return (
-        <View style={styles.content}>
-          <Text style={styles.title}>Need help making a{`\n`}decision?</Text>
-          <Text style={styles.placeholderText}>
-            You’ll put your chat / decision flow here.
-          </Text>
-        </View>
-      );
-    }
-
-    if (activeTab === "History") {
-      return (
-        <View style={styles.content}>
-          <Text style={styles.placeholderTitle}>History</Text>
-          <Text style={styles.placeholderText}>Your past decisions will show here.</Text>
-        </View>
-      );
-    }
-
-    if (activeTab === "Profile") {
-      return (
-        <View style={styles.content}>
-          <Text style={styles.placeholderTitle}>
-            Welcome{user?.firstName ? `, ${user.firstName}` : ""} 👋
-          </Text>
-
-          <View style={{ height: 12 }} />
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.signOutButton,
-              pressed && { opacity: 0.85 },
-              signingOut && { opacity: 0.6 },
-            ]}
-            onPress={handleSignOut}
-            disabled={signingOut}
-          >
-            {signingOut ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.signOutText}>Sign out</Text>
-            )}
-          </Pressable>
-        </View>
-      );
-    }
-
-    // Progress tab
-    return (
       <View style={styles.content}>
         <Text style={styles.placeholderTitle}>Progress</Text>
 
@@ -229,12 +156,22 @@ export default function Progress() {
           </View>
         ) : (
           <View style={styles.statsCard}>
-            <Text style={styles.statText}>XP: {xp}</Text>
-            <Text style={styles.statText}>Coins: {coins}</Text>
+            <View style={styles.statTopRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statText}>Level {level}</Text>
+                <Text style={styles.statSub}>
+                  XP {xpIntoLevel}/100 (Total {xp})
+                </Text>
+              </View>
 
-            <Pressable style={styles.demoBtn} onPress={awardDemo}>
-              <Text style={styles.demoBtnText}>Test: +10 XP / +2 Coins</Text>
-            </Pressable>
+              <Pressable style={styles.demoBtn} onPress={awardDemo}>
+                <Text style={styles.demoBtnText}>Test: +10 XP</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.progressOuter}>
+              <View style={[styles.progressInner, { width: `${progress01 * 100}%` }]} />
+            </View>
           </View>
         )}
 
@@ -243,7 +180,6 @@ export default function Progress() {
         <View style={styles.boardHeaderRow}>
           <Text style={styles.subtitle}>Leaderboard</Text>
           <Pressable onPress={fetchLeaderboard} style={styles.refreshBtn}>
-            <Ionicons name="refresh" size={16} color={TEXT} />
             <Text style={styles.refreshText}>Refresh</Text>
           </Pressable>
         </View>
@@ -254,19 +190,28 @@ export default function Progress() {
           <FlatList
             data={leaderboard}
             keyExtractor={(item) => item.profile_id}
-            contentContainerStyle={{ paddingBottom: 8 }}
+            contentContainerStyle={{ paddingBottom: 16 }}
             renderItem={({ item, index }) => {
               const isMe = item.clerk_user_id === clerkUserId;
+              const initial = (item.display_name?.[0] || "U").toUpperCase();
+
               return (
                 <View style={[styles.row, isMe && styles.rowMe]}>
                   <Text style={[styles.rank, isMe && styles.rankMe]}>#{index + 1}</Text>
+
+                  <View style={styles.avatarWrap}>
+                    {item.avatar_url ? (
+                      <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+                    ) : (
+                      <Text style={styles.avatarFallback}>{initial}</Text>
+                    )}
+                  </View>
+
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.name, isMe && styles.nameMe]} numberOfLines={1}>
                       {item.display_name}
                     </Text>
-                    <Text style={styles.small}>
-                      XP {item.xp} • Coins {item.coins}
-                    </Text>
+                    <Text style={styles.small}>XP {item.xp}</Text>
                   </View>
                 </View>
               );
@@ -274,64 +219,7 @@ export default function Progress() {
           />
         )}
       </View>
-    );
-  }, [
-    activeTab,
-    clerkUserId,
-    leaderboard,
-    loadingBoard,
-    loadingProfile,
-    signingOut,
-    user?.firstName,
-    xp,
-    coins,
-  ]);
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      {/* Header (Balance) */}
-      <View style={styles.header}>
-        <Text style={styles.logoText}>Balance</Text>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>?</Text>
-        </View>
-      </View>
-
-      {/* Content */}
-      <View style={{ flex: 1 }}>{content}</View>
-
-      {/* Bottom nav */}
-      <View style={styles.bottomNav}>
-        <TabItem label="New" icon="sparkles-outline" active={activeTab === "New"} onPress={() => setActiveTab("New")} />
-        <TabItem label="History" icon="time-outline" active={activeTab === "History"} onPress={() => setActiveTab("History")} />
-        <TabItem label="Progress" icon="trending-up-outline" active={activeTab === "Progress"} onPress={() => setActiveTab("Progress")} />
-        <TabItem label="Profile" icon="person-outline" active={activeTab === "Profile"} onPress={() => setActiveTab("Profile")} />
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
-
-function TabItem({
-  label,
-  icon,
-  active,
-  onPress,
-}: {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={styles.tabItem}>
-      <View style={[styles.tabIconWrap, active && styles.tabIconWrapActive]}>
-        <Ionicons name={icon} size={20} color={active ? "#0A5E62" : "#4F7F81"} />
-      </View>
-      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -342,32 +230,9 @@ const CARD = "#CDEEEE";
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
-
-  header: {
-    paddingTop: 28,
-    paddingHorizontal: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  logoText: { fontSize: 20, fontWeight: "700", color: TEXT, letterSpacing: 0.3 },
-  logoBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-    backgroundColor: "#9EE3E0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoBadgeText: { color: TEXT, fontWeight: "800", fontSize: 12, marginTop: -1 },
-
-  content: { flex: 1, paddingHorizontal: 26, paddingTop: 34 },
-
-  title: { fontSize: 26, lineHeight: 32, fontWeight: "500", color: TEXT, marginBottom: 10 },
+  content: { flex: 1, paddingHorizontal: 26, paddingTop: 18 },
 
   placeholderTitle: { fontSize: 20, fontWeight: "800", color: TEXT, marginBottom: 10 },
-  placeholderText: { fontSize: 14, color: MUTED },
 
   statsCard: {
     backgroundColor: CARD,
@@ -375,19 +240,34 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: "#A7DEDB",
-    gap: 8,
+    gap: 10,
   },
-  statText: { fontSize: 14, color: TEXT, fontWeight: "700" },
+
+  statTopRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  statText: { fontSize: 16, color: TEXT, fontWeight: "900" },
+  statSub: { fontSize: 12, color: MUTED, marginTop: 2 },
+
+  progressOuter: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(10,94,98,0.10)",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(10,94,98,0.12)",
+  },
+  progressInner: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: TEXT,
+  },
 
   demoBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    backgroundColor: "#0A5E62",
+    backgroundColor: TEXT,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
   },
-  demoBtnText: { color: "white", fontWeight: "800", fontSize: 12 },
+  demoBtnText: { color: "white", fontWeight: "900", fontSize: 12 },
 
   boardHeaderRow: {
     flexDirection: "row",
@@ -395,9 +275,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  subtitle: { fontSize: 16, fontWeight: "800", color: TEXT },
-  refreshBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 10 },
-  refreshText: { color: TEXT, fontWeight: "800", fontSize: 12 },
+  subtitle: { fontSize: 16, fontWeight: "900", color: TEXT },
+  refreshBtn: { paddingVertical: 6, paddingHorizontal: 10 },
+  refreshText: { color: TEXT, fontWeight: "900", fontSize: 12 },
 
   row: {
     flexDirection: "row",
@@ -415,41 +295,25 @@ const styles = StyleSheet.create({
     borderColor: "rgba(10,94,98,0.45)",
     backgroundColor: "rgba(191,237,235,0.65)",
   },
-  rank: { width: 46, color: MUTED, fontWeight: "800" },
-  rankMe: { color: TEXT },
-  name: { color: TEXT, fontWeight: "800" },
-  nameMe: { color: TEXT },
-  small: { color: MUTED, fontSize: 12, marginTop: 2 },
 
-  bottomNav: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: BG,
-    borderTopWidth: 1,
-    borderTopColor: "#BFE7E5",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  tabItem: { width: "23%", alignItems: "center", gap: 6 },
-  tabIconWrap: {
-    width: 46,
-    height: 28,
-    borderRadius: 14,
+  rank: { width: 38, color: MUTED, fontWeight: "900" },
+  rankMe: { color: TEXT },
+
+  avatarWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(10,94,98,0.12)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(10,94,98,0.18)",
   },
-  tabIconWrapActive: { backgroundColor: "#BFEDEB" },
-  tabLabel: { fontSize: 11, color: MUTED },
-  tabLabelActive: { color: TEXT, fontWeight: "700" },
+  avatar: { width: 36, height: 36 },
+  avatarFallback: { color: TEXT, fontWeight: "900" },
 
-  signOutButton: {
-    marginTop: 12,
-    backgroundColor: "#ef4444",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-  },
-  signOutText: { color: "#fff", fontWeight: "700" },
+  name: { color: TEXT, fontWeight: "900" },
+  nameMe: { color: TEXT },
+  small: { color: MUTED, fontSize: 12, marginTop: 2 },
 });
