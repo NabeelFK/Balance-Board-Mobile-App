@@ -126,6 +126,7 @@ Session stored in history
 
 🛠 Getting Started
 
+
 1️⃣ Clone the Repository
 git clone https://github.com/yourusername/balance.git
 cd balance-board-app
@@ -141,6 +142,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 EXPO_PUBLIC_OPENAI_API_KEY=SK-******** (your actual openai API key)
 Then restart Expo:
 npx expo start -c
+
 
 4️⃣ Run the App
 npx expo start
