@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,67 +7,103 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Image,
+  FlatList,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
+
+type Role = "user" | "assistant";
 
 type Msg = {
   id: string;
-  role: "user" | "assistant";
-  text?: string;
-  imageUri?: string;
+  role: Role;
+  text: string;
+  createdAt: number;
 };
 
 export default function ChatScreen() {
   const [text, setText] = useState("");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
-  // minimal “chat” state just to show the bubble like your mock
   const [messages, setMessages] = useState<Msg[]>([
-    // start empty, or keep an example assistant prompt
-    // { id: "a1", role: "assistant", text: "Tell me what decision you're making." },
+    {
+      id: "m1",
+      role: "assistant",
+      text:
+        "Hi! Tell me what decision you’re trying to make.\n\nExample: “Should I study tonight or go to an event?”",
+      createdAt: Date.now(),
+    },
   ]);
 
-  const canSend = useMemo(() => text.trim().length > 0 || !!selectedImage, [text, selectedImage]);
+  const listRef = useRef<FlatList<Msg>>(null);
 
-  const pickImage = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+  const canSend = useMemo(() => text.trim().length > 0, [text]);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
+  const scrollToBottom = () => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated: true });
     });
+  };
 
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+  const addMessage = (role: Role, msgText: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: String(Date.now()) + Math.random(), role, text: msgText, createdAt: Date.now() },
+    ]);
+  };
+
+  const fakeAssistantReply = (userText: string) => {
+    // Replace this later with real AI response or decision-tree logic
+    if (userText.toLowerCase().includes("study")) {
+      return (
+        "Let’s structure it.\n\n1) What’s the deadline/urgency?\n2) What do you gain from the event?\n3) If you go, how much studying can you still do after?\n\nAnswer those and I’ll suggest an outcome."
+      );
     }
+    return "Got it. What are the top 2 options you’re choosing between?";
   };
 
   const send = () => {
     if (!canSend) return;
+    const clean = text.trim();
 
-    const newMsg: Msg = {
-      id: String(Date.now()),
-      role: "user",
-      text: text.trim() ? text.trim() : undefined,
-      imageUri: selectedImage ?? undefined,
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
+    addMessage("user", clean);
     setText("");
-    setSelectedImage(null);
+    Keyboard.dismiss();
 
-    // TODO: call your AI / decision-tree logic here and append assistant msg
+    // simulate assistant response
+    setTimeout(() => {
+      addMessage("assistant", fakeAssistantReply(clean));
+      scrollToBottom();
+    }, 400);
+
+    scrollToBottom();
+  };
+
+  // Show “Choose outcome” when conversation is long enough (simple demo rule)
+  const showChooseOutcome = messages.length >= 6;
+
+  const chooseOutcome = () => {
+    // TODO: navigate to outcome screen OR open modal
+    addMessage("assistant", "✅ Outcome chosen. I can summarize your decision + next steps.");
+    scrollToBottom();
+  };
+
+  const renderItem = ({ item }: { item: Msg }) => {
+    const isUser = item.role === "user";
+    return (
+      <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+          <Text style={[styles.bubbleText, isUser ? styles.userText : styles.assistantText]}>
+            {item.text}
+          </Text>
+        </View>
+      </View>
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -77,65 +113,48 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* Title */}
-      <Text style={styles.title}>How can we help you make a{`\n`}decision?</Text>
+      {/* Messages */}
+      <FlatList
+        ref={listRef}
+        data={messages}
+        keyExtractor={(m) => m.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
+        onContentSizeChange={scrollToBottom}
+        onLayout={scrollToBottom}
+        keyboardShouldPersistTaps="handled"
+      />
 
-      {/* Camera button (center) */}
-      <Pressable style={styles.cameraBtn} onPress={pickImage}>
-        <Ionicons name="camera-outline" size={22} color={TEXT} />
-      </Pressable>
-
-      {/* Messages area (simple) */}
-      <View style={styles.messagesArea}>
-        {messages.map((m) =>
-          m.role === "user" ? (
-            <View key={m.id} style={styles.userRow}>
-              <View style={styles.userBubble}>
-                {!!m.imageUri && <Image source={{ uri: m.imageUri }} style={styles.bubbleImage} />}
-                {!!m.text && <Text style={styles.userText}>{m.text}</Text>}
-              </View>
-            </View>
-          ) : (
-            <View key={m.id} style={styles.assistantRow}>
-              <View style={styles.assistantBubble}>
-                <Text style={styles.assistantText}>{m.text}</Text>
-              </View>
-            </View>
-          )
-        )}
-      </View>
+      {/* Choose outcome button */}
+      {showChooseOutcome && (
+        <View style={styles.outcomeWrap}>
+          <Pressable onPress={chooseOutcome} style={({ pressed }) => [styles.outcomeBtn, pressed && { opacity: 0.85 }]}>
+            <Text style={styles.outcomeText}>Choose outcome</Text>
+          </Pressable>
+          <Text style={styles.outcomeHint}>(Need more help? keep chatting)</Text>
+        </View>
+      )}
 
       {/* Composer */}
       <View style={styles.composerWrap}>
-        {/* thumbnail preview like Frame 6 */}
-        {selectedImage && (
-          <View style={styles.previewRow}>
-            <Image source={{ uri: selectedImage }} style={styles.previewThumb} />
-            <Pressable onPress={() => setSelectedImage(null)} style={styles.removeBtn}>
-              <Ionicons name="close" size={16} color={TEXT} />
-            </Pressable>
-          </View>
-        )}
-
         <View style={styles.composer}>
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder="ask anything..."
+            placeholder="Your response..."
             placeholderTextColor="#7AAFB1"
             style={styles.input}
             returnKeyType="send"
             onSubmitEditing={send}
           />
-
           <Pressable
             onPress={send}
+            disabled={!canSend}
             style={({ pressed }) => [
               styles.sendBtn,
               !canSend && { opacity: 0.35 },
               pressed && canSend && { opacity: 0.85 },
             ]}
-            disabled={!canSend}
           >
             <Ionicons name="send" size={18} color="white" />
           </Pressable>
@@ -172,92 +191,57 @@ const styles = StyleSheet.create({
   },
   logoBadgeText: { color: TEXT, fontWeight: "800", fontSize: 12, marginTop: -1 },
 
-  title: {
-    marginTop: 26,
-    paddingHorizontal: 26,
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: "500",
-    color: TEXT,
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    gap: 10,
   },
 
-  cameraBtn: {
-    marginTop: 18,
-    alignSelf: "center",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  row: { width: "100%", flexDirection: "row" },
+  rowLeft: { justifyContent: "flex-start" },
+  rowRight: { justifyContent: "flex-end" },
+
+  bubble: {
+    maxWidth: "82%",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#A7DEDB",
-    backgroundColor: CARD,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
-  messagesArea: {
-    flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-  },
-
-  userRow: { alignItems: "flex-end" },
-  userBubble: {
-    maxWidth: "80%",
-    backgroundColor: "#BFEDEB",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 10,
-  },
-  userText: { color: TEXT, fontSize: 14 },
-
-  assistantRow: { alignItems: "flex-start" },
   assistantBubble: {
-    maxWidth: "80%",
     backgroundColor: CARD,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 10,
+    borderColor: "#A7DEDB",
   },
-  assistantText: { color: MUTED, fontSize: 14 },
+  userBubble: {
+    backgroundColor: "#BFEDEB",
+    borderColor: "#9ADDD9",
+  },
 
-  bubbleImage: {
-    width: 160,
-    height: 90,
-    borderRadius: 12,
-    marginBottom: 8,
+  bubbleText: { fontSize: 13, lineHeight: 18 },
+  assistantText: { color: MUTED },
+  userText: { color: TEXT, fontWeight: "500" },
+
+  outcomeWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    alignItems: "center",
+    gap: 6,
   },
+  outcomeBtn: {
+    backgroundColor: TEXT,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  outcomeText: { color: "white", fontWeight: "700" },
+  outcomeHint: { fontSize: 11, color: MUTED },
 
   composerWrap: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingBottom: 14,
   },
-
-  previewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
-  },
-  previewThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#A7DEDB",
-  },
-  removeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: "#A7DEDB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   composer: {
     flexDirection: "row",
     alignItems: "center",
@@ -280,3 +264,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
