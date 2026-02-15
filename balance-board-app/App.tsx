@@ -1,8 +1,8 @@
 import React from "react";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-expo";
 import * as SecureStore from "expo-secure-store";
-import LoginScreen from "./LoginScreen";
-import HomeScreen from "./HomeScreen";
+import LoginScreen from "./screens/LoginScreen";
+import HomeScreen from "./screens/HomeScreen";
 
 const tokenCache = {
   async getToken(key: string) {
