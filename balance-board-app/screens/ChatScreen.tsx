@@ -11,6 +11,7 @@ import {
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 type Role = "user" | "assistant";
 
@@ -22,6 +23,8 @@ type Msg = {
 };
 
 export default function ChatScreen() {
+  const navigation = useNavigation<any>();
+
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -46,7 +49,12 @@ export default function ChatScreen() {
   const addMessage = (role: Role, msgText: string) => {
     setMessages((prev) => [
       ...prev,
-      { id: String(Date.now()) + Math.random(), role, text: msgText, createdAt: Date.now() },
+      {
+        id: String(Date.now()) + Math.random(),
+        role,
+        text: msgText,
+        createdAt: Date.now(),
+      },
     ]);
   };
 
@@ -62,8 +70,8 @@ export default function ChatScreen() {
 
   const send = () => {
     if (!canSend) return;
-    const clean = text.trim();
 
+    const clean = text.trim();
     addMessage("user", clean);
     setText("");
     Keyboard.dismiss();
@@ -81,7 +89,6 @@ export default function ChatScreen() {
   const showChooseOutcome = messages.length >= 6;
 
   const chooseOutcome = () => {
-    // TODO: navigate to outcome screen OR open modal
     addMessage("assistant", "✅ Outcome chosen. I can summarize your decision + next steps.");
     scrollToBottom();
   };
@@ -107,6 +114,11 @@ export default function ChatScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
+        {/* ✅ Back button */}
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
+          <Ionicons name="chevron-back" size={22} color={TEXT} />
+        </Pressable>
+
         <Text style={styles.logoText}>Balance</Text>
         <View style={styles.logoBadge}>
           <Text style={styles.logoBadgeText}>?</Text>
@@ -128,7 +140,10 @@ export default function ChatScreen() {
       {/* Choose outcome button */}
       {showChooseOutcome && (
         <View style={styles.outcomeWrap}>
-          <Pressable onPress={chooseOutcome} style={({ pressed }) => [styles.outcomeBtn, pressed && { opacity: 0.85 }]}>
+          <Pressable
+            onPress={chooseOutcome}
+            style={({ pressed }) => [styles.outcomeBtn, pressed && { opacity: 0.85 }]}
+          >
             <Text style={styles.outcomeText}>Choose outcome</Text>
           </Pressable>
           <Text style={styles.outcomeHint}>(Need more help? keep chatting)</Text>
@@ -180,6 +195,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
+
+  backBtn: {
+    position: "absolute",
+    left: 10,
+    padding: 10,
+  },
+
   logoText: { fontSize: 20, fontWeight: "700", color: TEXT, letterSpacing: 0.3 },
   logoBadge: {
     width: 18,
@@ -264,4 +286,3 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
-
