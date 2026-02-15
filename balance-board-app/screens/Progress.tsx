@@ -23,6 +23,24 @@ type LeaderRow = {
   created_at: string;
 };
 
+function normalizeName(s: unknown): string | null {
+  if (typeof s !== "string") return null;
+  const cleaned = s.trim().replace(/\s+/g, " ");
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
+function looksLikeEmail(s: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
+
+function emailLocalPart(email?: string | null) {
+  if (!email) return null;
+  const at = email.indexOf("@");
+  if (at <= 0) return null;
+  const local = email.slice(0, at).trim();
+  return local.length >= 2 ? local : null;
+}
+
 export default function Progress() {
   const supabase = useSupabase();
   const { user } = useUser();
@@ -44,24 +62,41 @@ export default function Progress() {
   useEffect(() => {
     let cancelled = false;
 
-    async function ensureProfile() {
+    async function ensureProfile(attempt = 0) {
       if (!clerkUserId) return;
 
       setLoadingProfile(true);
       try {
-        const metaPublic = (user as any)?.publicMetadata?.display_name;
-        const metaUnsafe = (user as any)?.unsafeMetadata?.display_name;
+        const metaPublic = normalizeName((user as any)?.publicMetadata?.display_name);
+        const metaUnsafe = normalizeName((user as any)?.unsafeMetadata?.display_name);
 
-        const displayName =
-          (typeof metaPublic === "string" && metaPublic.trim().length >= 2
-            ? metaPublic.trim()
-            : typeof metaUnsafe === "string" && metaUnsafe.trim().length >= 2
-            ? metaUnsafe.trim()
-            : (user?.fullName || user?.firstName || "Anonymous"));
+        const fullName = normalizeName(user?.fullName);
+        const firstName = normalizeName(user?.firstName);
+        const username = normalizeName(user?.username);
 
-        const metaPresent = !!metaPublic || !!metaUnsafe;
-        if (!metaPresent && displayName.includes("@") && attempt < 3) {
-          setTimeout(() => tryEnsureProfile(attempt + 1), 600);
+        const email = user?.primaryEmailAddress?.emailAddress ?? null;
+
+        // Prefer real names + metadata before anything else
+        let displayName =
+          fullName ||
+          firstName ||
+          metaUnsafe ||
+          metaPublic ||
+          username ||
+          emailLocalPart(email) ||
+          "Anonymous";
+
+        // Safety: never store email as display name
+        if (looksLikeEmail(displayName)) {
+          displayName = username || emailLocalPart(email) || "Anonymous";
+        }
+
+        const metaPresent = !!(metaPublic || metaUnsafe);
+
+        // If we don't have metadata and the name seems "email-ish" or weak right after signup,
+        // retry briefly (race condition right after sign up)
+        if (!metaPresent && attempt < 3 && (displayName.includes("@") || displayName === "Anonymous")) {
+          setTimeout(() => ensureProfile(attempt + 1), 600);
           return;
         }
 
