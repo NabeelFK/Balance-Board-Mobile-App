@@ -63,8 +63,6 @@ export const SwotQuestionnaireSchema = z.discriminatedUnion("status", [
 // --- PHASE 2.5: ANSWER VALIDATION ---
 const ValidAnswerSchema = z.object({
   status: z.literal("VALID"),
-  classification: z.enum(["STRONG", "WEAK"]),
-  refined_answer: z.string().describe("Cleaned-up version of their answer."),
 });
 
 const InvalidAnswerSchema = z.object({
@@ -84,7 +82,6 @@ const ValidSimulationSchema = z.object({
   decision_id: z.string().optional(),
   predicted_outcome: z.string().min(1),
   probability: z.number().min(0).max(100),
-  key_risks: z.array(z.string().min(1)),
 });
 
 export const SimulationSchema = z.discriminatedUnion("status", [

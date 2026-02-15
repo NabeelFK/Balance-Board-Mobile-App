@@ -30,8 +30,6 @@ export async function generateStructured(
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" }, // <--- The "JSON Mode" switch
-      temperature: 0.2, // Low randomness for logic tasks
-      max_tokens: 500,
     });
 
     const content = response.choices[0].message.content;

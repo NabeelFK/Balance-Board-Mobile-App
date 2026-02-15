@@ -38,6 +38,21 @@ export async function triageUserInput(rawText: string): Promise<ParsedInput> {
       
     CONSTRAINT: Do NOT invent decisions. If they aren't there, return []. Do not decide for the user on any occasion. 
     GOAL: Guide the user so they can develop circumstancial analysis skill.
+    You must return a JSON object matching one of these two structures exactly:
+    OPTION 1 (Valid Input):
+    {
+      "status": "VALID",
+      "problem_statement": "The core issue summary",
+      "identified_decisions": ["Option A", "Option B"] 
+      // Note: Return [] if problem is clear but no decision stated.
+    }
+
+    OPTION 2 (Invalid Input):
+    {
+      "status": "INVALID",
+      "reason": "NONSENSE" | "OFF_TOPIC" | "HARMFUL" | "TOO_VAGUE",
+      "guidance": "A helpful error message."
+    }
   `;
 
   try {
