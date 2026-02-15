@@ -368,6 +368,7 @@ const styles = StyleSheet.create({
   userText: { color: TEXT, fontWeight: "500" },
 
   outcomeWrap: {
+    paddingTop: 10,
     paddingHorizontal: 16,
     paddingBottom: 6,
     alignItems: "center",
