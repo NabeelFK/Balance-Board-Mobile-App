@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,22 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useClerk, useUser } from "@clerk/clerk-expo";
+import { useClerk, useUser, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+
+import { useSupabase } from "../providers/SupabaseProvider";
+
+
 
 type Tab = "New" | "History" | "Progress" | "Profile";
 
 export default function HomeScreen() {
+
+  const supabase = useSupabase();
+
   const { signOut } = useClerk();
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("New");
@@ -41,6 +49,61 @@ export default function HomeScreen() {
     // navigation.navigate("Chat", { prompt })
     console.log("Start decision with:", prompt);
   };
+
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [xp, setXp] = useState<number>(0);
+  const [coins, setCoins] = useState<number>(0);
+  
+  useEffect(() => {
+  async function testConnection() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .limit(1);
+
+    console.log("SUPABASE TEST DATA:", data);
+    console.log("SUPABASE TEST ERROR:", error);
+  }
+
+  useEffect(() => {
+  async function ensureProfile() {
+    if (!user?.id) return;
+
+    const displayName =
+      user.fullName ||
+      user.firstName ||
+      user.primaryEmailAddress?.emailAddress ||
+      "Anonymous";
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          clerk_user_id: user.id,
+          display_name: displayName,
+          avatar_url: user.imageUrl ?? null,
+        },
+        { onConflict: "clerk_user_id" }
+      )
+      .select("id, xp, coins")
+      .single();
+
+    console.log("UPSERT PROFILE:", data, error);
+
+    if (!error && data) {
+      setProfileId(data.id);
+      setXp(Number(data.xp ?? 0));
+      setCoins(Number(data.coins ?? 0));
+    }
+  }
+
+  ensureProfile();
+}, [user?.id]);
+
+
+  testConnection();
+}, []);
+
 
   return (
     <KeyboardAvoidingView
