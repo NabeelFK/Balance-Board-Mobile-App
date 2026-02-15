@@ -221,19 +221,19 @@ export default function ChatScreen() {
       />
 
       {/* Choose outcome button */}
-      {showChooseOutcome && (
+      {sessions.length > 0 && currentStep === 3 && answers.t !== "" && (
         <View style={styles.outcomeWrap}>
           <Pressable
             onPress={chooseOutcome}
             style={({ pressed }) => [
               styles.outcomeBtn,
-              pressed && { opacity: 0.85 },
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <Text style={styles.outcomeText}>Choose outcome</Text>
+            <Text style={styles.outcomeText}>🔮 Generate Outcome</Text>
           </Pressable>
           <Text style={styles.outcomeHint}>
-            (Need more help? keep chatting)
+            Ready for the simulation of "{sessions[currentTrack]?.decision}"?
           </Text>
         </View>
       )}
@@ -375,5 +375,11 @@ const styles = StyleSheet.create({
     backgroundColor: TEXT,
     alignItems: "center",
     justifyContent: "center",
+  },
+  backBtn: {
+    position: "absolute",
+    left: 16,
+    top: 32, // Adjust based on your header height
+    padding: 8,
   },
 });
