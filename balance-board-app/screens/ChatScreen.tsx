@@ -1,4 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { startChat, getResults } from "../lib/actions";
 import {
   View,
@@ -31,6 +33,10 @@ const CARD = "#CDEEEE";
 
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+
+  const [footerH, setFooterH] = useState(0);
 
   // Decision engine state
   const [userId] = useState<string | null>(null);
@@ -75,9 +81,7 @@ export default function ChatScreen() {
   const canSend = useMemo(() => text.trim().length > 0, [text]);
 
   const scrollToBottom = () => {
-    requestAnimationFrame(() =>
-      listRef.current?.scrollToEnd({ animated: true }),
-    );
+    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   };
 
   const addMessage = (role: Role, msgText: string) => {
@@ -155,7 +159,7 @@ export default function ChatScreen() {
     } else {
       addMessage(
         "assistant",
-        `Analysis for "${sessions[currentTrack]?.decision}" complete. Tap '🔮 Generate Outcome' below.`,
+        `Analysis for "${sessions[currentTrack]?.decision}" complete. Tap '🔮 Generate Outcome' below.`
       );
     }
 
@@ -198,7 +202,7 @@ export default function ChatScreen() {
         const firstQ = sessions[nextTrack]?.questions?.[0]?.text;
         addMessage(
           "assistant",
-          `Now let's analyze your next option: "${sessions[nextTrack].decision}"\n\n${firstQ}`,
+          `Now let's analyze your next option: "${sessions[nextTrack].decision}"\n\n${firstQ}`
         );
         scrollToBottom();
       }, 700);
@@ -249,21 +253,28 @@ export default function ChatScreen() {
     );
   };
 
+  /**
+   * FIXES IMPLEMENTED:
+   * 1) Footer padding no longer adds insets.bottom (tabBarHeight already includes it on iOS)
+   * 2) KeyboardAvoidingView offset includes a buffer for your custom header/back row so input lands above keyboard cleanly
+   */
+
+  const keyboardOffsetIOS = -75;
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-
+      keyboardVerticalOffset={Platform.OS === "ios" ? keyboardOffsetIOS : 0}
     >
       <BalanceHeader />
 
-      {/* Back button row (uses BalanceHeader visually, but still gives you a back action) */}
+      {/* Back button row */}
       <View style={styles.backRow}>
         <Pressable
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();
-            else navigation.navigate("NewHome"); // <-- change if your route name is different
+            else navigation.navigate("NewHome");
           }}
           style={styles.backBtn}
           hitSlop={10}
@@ -277,30 +288,36 @@ export default function ChatScreen() {
         data={messages}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          // Keep last message visible above footer + tab bar
+          { paddingBottom: footerH + tabBarHeight + 16 },
+        ]}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         keyboardShouldPersistTaps="handled"
       />
 
-      {showGenerateOutcome && (
-        <View style={styles.outcomeWrap}>
-          <Pressable
-            onPress={chooseOutcome}
-            style={({ pressed }) => [
-              styles.outcomeBtn,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <Text style={styles.outcomeText}>🔮 Generate Outcome</Text>
-          </Pressable>
-          <Text style={styles.outcomeHint}>
-            Ready for the simulation of "{sessions[currentTrack]?.decision}"?
-          </Text>
-        </View>
-      )}
+      {/* Footer pinned visually above tab bar by default */}
+      <View
+        style={[
+          styles.footer,
+          // IMPORTANT: do NOT add insets.bottom here; tabBarHeight already accounts for it.
+          { paddingBottom: tabBarHeight + 12 },
+        ]}
+        onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
+      >
+        {showGenerateOutcome && (
+          <View style={styles.outcomeWrap}>
+            <Pressable onPress={chooseOutcome} style={styles.outcomeBtn}>
+              <Text style={styles.outcomeText}>🔮 Generate Outcome</Text>
+            </Pressable>
+            <Text style={styles.outcomeHint}>
+              Ready for the simulation of "{sessions[currentTrack]?.decision}"?
+            </Text>
+          </View>
+        )}
 
-      <View style={styles.composerWrap}>
         <View style={styles.composer}>
           <TextInput
             value={text}
@@ -310,6 +327,7 @@ export default function ChatScreen() {
             style={styles.input}
             returnKeyType="send"
             onSubmitEditing={send}
+            blurOnSubmit={false}
           />
           <Pressable
             onPress={send}
@@ -342,11 +360,15 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-  paddingHorizontal: 16,
-  paddingTop: 12,
-  paddingBottom: 10, // was 110
-  gap: 10,
-},
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 10,
+  },
+
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
 
   row: { width: "100%", flexDirection: "row" },
   rowLeft: { justifyContent: "flex-start" },
@@ -368,7 +390,6 @@ const styles = StyleSheet.create({
   userText: { color: TEXT, fontWeight: "500" },
 
   outcomeWrap: {
-    paddingHorizontal: 16,
     paddingBottom: 6,
     alignItems: "center",
     gap: 6,
@@ -382,18 +403,18 @@ const styles = StyleSheet.create({
   outcomeText: { color: "white", fontWeight: "800" },
   outcomeHint: { fontSize: 11, color: MUTED, textAlign: "center" },
 
-  composerWrap: { paddingHorizontal: 16, paddingBottom: 90 },
   composer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
     backgroundColor: CARD,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#A7DEDB",
+    borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 10,
   },
+
   input: { flex: 1, fontSize: 14, color: TEXT },
   sendBtn: {
     width: 36,

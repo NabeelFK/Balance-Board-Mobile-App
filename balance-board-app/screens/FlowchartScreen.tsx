@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   backBtn: { position: "absolute", left: 14, padding: 8 },
   backText: { color: TEXT, fontWeight: "800", fontSize: 14 },
 
-  scroll: { padding: 18, paddingBottom: 30 },
+  scroll: { padding: 18, paddingBottom: 90 },
 
   bigTitle: {
     backgroundColor: TEXT,
