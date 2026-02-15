@@ -12,14 +12,27 @@ const InvalidResponseSchema = z.object({
 // --- PHASE 1: INPUT PARSING ---
 const ValidInputSchema = z.object({
   status: z.literal("VALID"),
+
   problem_statement: z
     .string()
     .min(1)
     .describe("Concise summary of the core issue."),
+
+  // ALLOW EMPTY ARRAY: This lets us detect "Problem Only" (Case 2)
   identified_decisions: z
-    .array(z.string().min(1))
+    .array(z.string())
+    .describe(
+      "List of distinct options. Return [] if user stated a problem but no specific choices.",
+    ),
+
+  // Helper for the UI when decisions are missing
+  elicitation_question: z
+    .string()
     .min(1)
-    .describe("List of distinct, actionable options found."),
+    .optional()
+    .describe(
+      "If no decisions found, a specific question asking for one (e.g., 'What is one action you could take?').",
+    ),
 });
 
 export const ParsedInputSchema = z.discriminatedUnion("status", [
@@ -50,7 +63,7 @@ export const SwotQuestionnaireSchema = z.discriminatedUnion("status", [
 // --- PHASE 2.5: ANSWER VALIDATION ---
 const ValidAnswerSchema = z.object({
   status: z.literal("VALID"),
-  classification: z.enum(["STRONG", "WEAK", "IRRELEVANT", "OPPOSITE"]),
+  classification: z.enum(["STRONG", "WEAK"]),
   refined_answer: z.string().describe("Cleaned-up version of their answer."),
 });
 
