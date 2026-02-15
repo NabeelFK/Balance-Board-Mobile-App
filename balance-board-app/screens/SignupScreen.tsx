@@ -11,19 +11,20 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
-import { useSignIn } from "@clerk/clerk-expo";
+import { useSignUp } from "@clerk/clerk-expo";
 
 type Props = {
-  onGoToSignup: () => void;
+  onGoToLogin: () => void;
 };
 
-export default function LoginScreen({ onGoToSignup }: Props) {
-  const { signIn, setActive, isLoaded } = useSignIn();
+export default function SignupScreen({ onGoToLogin }: Props) {
+  const { signUp, setActive, isLoaded } = useSignUp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
@@ -32,32 +33,40 @@ export default function LoginScreen({ onGoToSignup }: Props) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
   }, [normalizedEmail]);
 
-  const canSignIn =
-    isLoaded && !isSigningIn && isEmailValid && password.length >= 6;
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
 
-  const signInWithPassword = async () => {
-    if (!canSignIn) return;
+  const canSignUp =
+    isLoaded &&
+    !isSigningUp &&
+    isEmailValid &&
+    password.length >= 6 &&
+    passwordsMatch;
+
+  const signUpWithPassword = async () => {
+    if (!canSignUp) return;
 
     setError(null);
-    setIsSigningIn(true);
+    setIsSigningUp(true);
 
     try {
-      const res = await signIn!.create({
-        identifier: normalizedEmail,
+      const res = await signUp!.create({
+        emailAddress: normalizedEmail,
         password,
       });
 
       if (res.status === "complete") {
         await setActive!({ session: res.createdSessionId });
       } else {
-        setError("Sign in incomplete. Please try again.");
+        setError(
+          "Account created, but sign up is not complete. Email verification may be required."
+        );
       }
     } catch (e: any) {
       const msg =
-        e?.errors?.[0]?.message || e?.message || "Invalid email or password.";
+        e?.errors?.[0]?.message || e?.message || "Sign up failed. Try again.";
       setError(msg);
     } finally {
-      setIsSigningIn(false);
+      setIsSigningUp(false);
     }
   };
 
@@ -67,13 +76,12 @@ export default function LoginScreen({ onGoToSignup }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.screen}
       >
-        {/* This View prevents background Pressable from stealing child touches */}
         <View style={styles.container} pointerEvents="box-none">
         <Image
-          source={require("../assets/balance_board.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+  source={require("../assets/balance_board.png")}
+  style={styles.logo}
+  resizeMode="contain"
+/>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -87,48 +95,56 @@ export default function LoginScreen({ onGoToSignup }: Props) {
             keyboardType="email-address"
             textContentType="emailAddress"
             style={styles.input}
-            returnKeyType="next"
           />
 
           <TextInput
-            placeholder="Password"
+            placeholder="Set Password"
             placeholderTextColor={COLORS.tealPlaceholder}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            textContentType="password"
+            textContentType="newPassword"
             style={styles.input}
-            returnKeyType="done"
-            onSubmitEditing={signInWithPassword}
           />
 
+          <TextInput
+            placeholder="Confirm Password"
+            placeholderTextColor={COLORS.tealPlaceholder}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            style={styles.input}
+            onSubmitEditing={signUpWithPassword}
+          />
+
+          {!passwordsMatch && confirmPassword.length > 0 ? (
+            <Text style={styles.error}>Passwords do not match.</Text>
+          ) : null}
+
           <Pressable
-            onPress={signInWithPassword}
-            disabled={!canSignIn}
+            onPress={signUpWithPassword}
+            disabled={!canSignUp}
             style={({ pressed }) => [
               styles.button,
-              !canSignIn && styles.buttonDisabled,
-              pressed && canSignIn && styles.buttonPressed,
+              !canSignUp && styles.buttonDisabled,
+              pressed && canSignUp && styles.buttonPressed,
             ]}
           >
-            {isSigningIn ? (
+            {isSigningUp ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.buttonText}>Log in</Text>
+              <Text style={styles.buttonText}>Sign up</Text>
             )}
           </Pressable>
 
-          <View style={styles.divider} />
-
-          {/* ✅ This will 100% switch screens */}
           <Pressable
             onPress={() => {
-              console.log("Signup link pressed");
-              onGoToSignup();
+              console.log("Back to login pressed");
+              onGoToLogin();
             }}
             style={styles.linkWrap}
           >
-            <Text style={styles.link}>Sign up using email</Text>
+            <Text style={styles.link}>Back to log in</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -161,9 +177,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  titleWrap: {
-    alignItems: "center",
-  },
+  titleWrap: { alignItems: "center" },
   titleBalance: {
     fontSize: 56,
     fontWeight: "900",
@@ -227,23 +241,14 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
     opacity: 0.95,
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: {
     color: "white",
     fontWeight: "900",
     fontSize: 28,
   },
-  divider: {
-    width: "86%",
-    height: 2,
-    backgroundColor: COLORS.tealBorder,
-    marginTop: 26,
-    marginBottom: 18,
-    borderRadius: 2,
-  },
   linkWrap: {
+    marginTop: 18,
     paddingVertical: 10,
   },
   link: {
