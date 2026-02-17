@@ -16,6 +16,73 @@ Watch the full app walkthrough:
 
 ---
 
+## 📸 Screenshots
+
+### 🏠 Main Entry Screen
+Users can quickly start a new structured decision session.
+
+<p align="center">
+  <img src="screenshots/Main.PNG" width="280"/>
+</p>
+
+---
+
+### 💬 Guided Question Flow
+Chat-style interface that gathers structured context before analysis.
+
+<p align="center">
+  <img src="screenshots/Chat.PNG" width="280"/>
+</p>
+
+---
+
+### 📊 SWOT-Based Decision Comparison
+Side-by-side structured breakdown of decision paths.
+
+<p align="center">
+  <img src="screenshots/Decision.PNG" width="280"/>
+</p>
+
+---
+
+### 🎉 XP Reward & Confirmation
+Gamified reinforcement when users complete a decision.
+
+<p align="center">
+  <img src="screenshots/XP.PNG" width="280"/>
+</p>
+
+---
+
+### 📜 Decision History
+Users can revisit past decisions and reflect on reasoning and outcomes.
+
+<p align="center">
+  <img src="screenshots/History.PNG" width="280"/>
+</p>
+
+---
+
+### 📈 Progress & Leaderboard
+XP tracking and competitive leaderboard to encourage engagement.
+
+<p align="center">
+  <img src="screenshots/Leaderboard.PNG" width="280"/>
+</p>
+
+---
+
+### 👤 Authentication & Profile
+Secure sign-in, sign-up, and profile management powered by Clerk.
+
+<p align="center">
+  <img src="screenshots/SignIn.PNG" width="260"/>
+  <img src="screenshots/SignUp.PNG" width="260"/>
+  <img src="screenshots/Profile.PNG" width="260"/>
+</p>
+
+---
+
 ## 🚀 Problem Statement
 
 Important decisions can feel overwhelming — especially when options carry similar risks or rewards. Many people rely on emotional reasoning or incomplete analysis.
