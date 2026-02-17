@@ -23,9 +23,9 @@ Users initiate a structured decision session, engage in adaptive chat-based clar
 
 
 <p align="center">
-  <img src="screenshots/Main.PNG" width="280"/>
-  <img src="screenshots/Chat.PNG" width="280"/>
-  <img src="screenshots/Decision.PNG" width="280"/>
+  <img src="screenshots/Main.PNG" width="260"/>
+  <img src="screenshots/Chat.PNG" width="260"/>
+  <img src="screenshots/Decision.PNG" width="260"/>
 </p>
 
 ---
@@ -35,9 +35,9 @@ Decision completion is reinforced through XP rewards, historical session trackin
 
 
 <p align="center">
-  <img src="screenshots/XP.PNG" width="280"/>
-  <img src="screenshots/Leaderboard.PNG" width="280"/>
-  <img src="screenshots/History.PNG" width="280"/>
+  <img src="screenshots/XP.PNG" width="260"/>
+  <img src="screenshots/Leaderboard.PNG" width="260"/>
+  <img src="screenshots/History.PNG" width="260"/>
 </p>
 
 ---
