@@ -146,8 +146,7 @@ Users can revisit previous sessions to:
 
 ### 🗄 Backend
 
-- Supabase (PostgreSQL + API)  
-- Clerk authentication  
+- Supabase (PostgreSQL + API)
 - Secure session handling via Clerk authentication 
 - Profile persistence (XP, coins, history, personal context)  
 
