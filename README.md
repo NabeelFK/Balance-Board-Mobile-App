@@ -1,179 +1,202 @@
-🧠 Balance Board
+# 🧠 Balance Board  
+### A Smart Decision-Making Companion
 
-A Smart Decision-Making Companion
+**Balance Board** is an AI-powered decision-making assistant designed to help users approach complex choices with structure, clarity, and confidence.
 
-Balance is an AI-powered decision-making assistant designed to help users navigate complex choices with clarity and confidence. The app guides users through structured questioning, helps the user perform SWOT analysis, predicts possible outcomes, and rewards thoughtful decision-making with an XP-based progression system.
+Rather than functioning as a generic chatbot, Balance Board guides users through a structured analytical process that incorporates adaptive questioning, SWOT analysis, probabilistic outcome modeling, and a gamified progression system that rewards thoughtful reflection.
 
-Built as a modern mobile-first experience using React Native and Supabase.
+Built as a modern, mobile-first application using **React Native (Expo)** and **Supabase**.
 
-## 🎥 Demo Video
+---
 
-Watch the full app walkthrough here:
-https://www.youtube.com/watch?v=7Pngm4Mi4RU
+## 🎥 Demo
 
---------------------------------------------
+Watch the full app walkthrough:  
+👉 https://www.youtube.com/watch?v=7Pngm4Mi4RU
 
+---
 
-🚀 What Problem Does It Solve?
+## 🚀 Problem Statement
 
-Making decisions can be overwhelming, especially when options feel equally compelling or risky. Balance helps users:
+Important decisions can feel overwhelming — especially when options carry similar risks or rewards. Many people rely on emotional reasoning or incomplete analysis.
 
-Break down confusing decisions into structured analysis
+Balance Board helps users:
 
-Reflect on consequences before committing
+- Break down complex decisions into structured components  
+- Reflect on long-term consequences before committing  
+- Analyze strengths, weaknesses, opportunities, and threats  
+- Evaluate likely outcomes using probabilistic reasoning  
+- Build stronger decision-making habits over time  
 
-Visualize strengths, weaknesses, opportunities, and threats
+---
 
-Understand likely outcomes of each option
+## 🌟 Core Features
 
-Track growth through a gamified XP system
+### 💬 Interactive Decision Flow
 
+Users input a problem (e.g., *“Should I switch majors?”*). The system:
 
-🌟 Core Features
-💬 Interactive Decision Flow
+- Asks adaptive clarification questions  
+- Builds contextual understanding  
+- Structures the decision before analysis begins  
 
-Users input a problem (e.g., “Should I switch majors?”), and the app:
+---
 
-Asks a series of adaptive clarification questions
+### 📊 SWOT Analysis Engine
 
-Paint a clear, broad picture about the situation
+For each potential decision path, the app generates guided prompts that help users evaluate:
 
-Gathers context before analysis
+- Strengths  
+- Weaknesses  
+- Opportunities  
+- Threats  
 
-📊 SWOT Analysis Engine
+This structured breakdown encourages rational, critical thinking over emotional impulse.
 
-For each decision path, the system generates probing questions that help the user assert their:
+---
 
-Strengths
+### 🔮 Outcome Prediction
 
-Weaknesses
+For each decision option, the system generates:
 
-Opportunities
+- Likely consequences  
+- Estimated probabilities  
+- Context-aware projections  
 
-Threats
+The final decision always remains with the user — Balance Board structures the thinking process but does not decide for them.
 
-This structured breakdown helps users think critically rather than emotionally.
+---
 
-🔮 Outcome Prediction
+### 🎮 XP & Progression System
 
-The app presents possible outcomes for each option, including:
+To reinforce reflective behavior:
 
-Likely consequences
+- XP is awarded upon committing to a decision  
+- User progress is tracked over time  
+- Gamification incentivizes thoughtful analysis  
 
-Probability of happening
+---
 
-Users can then choose their preferred outcome correspond to an original decision.
+### 📜 Decision History
 
-🎮 XP & Progress System
+Users can revisit previous sessions to:
 
-Once a user commits to a decision:
+- Review their structured reasoning  
+- Reflect on growth  
+- Track long-term decision patterns  
 
-XP is awarded 
+---
 
-Progress is tracked
+## 🏗 Architecture Overview
 
-Gamification encourages thoughtful reflection rather than impulsive choices
+### 📱 Frontend
 
+- React Native (Expo)  
+- TypeScript  
+- Custom navigation (Stack + Tabs)  
+- Chat-style guided interface  
 
-📜 Decision History
+---
 
-Users can revisit past decisions, see their analysis, and reflect on growth over time.
+### 🧠 Decision Engine
 
+- Finite State Machine (FSM / NFA-inspired workflow per session)  
+- LLM parsing and validation layer  
+- Typed outcome objects with Zod validation  
+- Context-aware adaptive questioning  
 
-🏗 Architecture Overview
-📱 Frontend
+---
 
-React Native (Expo)
+### 🗄 Backend
 
-TypeScript
+- Supabase (PostgreSQL + API)  
+- Clerk authentication  
+- Secure session storage  
+- Profile persistence (XP, coins, history, personal context)  
 
-Custom navigation (Stack + Tabs)
+---
 
-Chat-style UI for guided questioning
+## 🧩 Application Flow
 
-🧠 Decision Engine
+1. User submits a problem and potential options  
+2. App gathers structured contextual information  
+3. SWOT framework is applied  
+4. Outcome modeling is generated  
+5. User selects a final decision  
+6. XP is awarded  
+7. Session is stored in history  
 
-Finite state machine decision model for each session
+---
 
-LLM parsing + validation layer
+## 🛠 Getting Started
 
-Typed outcome objects (safe state handling)
+### 1. Clone the Repository
 
-Context-aware question flow
-
-🗄 Backend / Database
-
-Supabase
-
-Clerk authentication
-
-Profile persistence (XP, coins, history, personal context)
-
-Secure session storage
-
-
-🧩 How It Works (Flow)
-
-User enters a problem and a set of decisions
-
-App asks structured follow-up questions
-
-Context is parsed and analyzed
-
-SWOT analysis is used for outcome prediction
-
-Final choices are presented to the user
-
-User is the one with the agency to decide their problem
-
-XP is awarded based
-
-Session stored in history
-
-
-🛠 Getting Started
-
-
-1️⃣ Clone the Repository
+```bash
 git clone https://github.com/yourusername/balance.git
 cd balance-board-app
+```
 
-2️⃣ Install Dependencies
+### 2. Install Dependencies
+
+```bash
 npm install
+```
 
-3️⃣ Configure Environment Variables
-Create a .env file in the project root:
+### 3. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-EXPO_PUBLIC_OPENAI_API_KEY=SK-******** (your actual openai API key)
-Then restart Expo:
+EXPO_PUBLIC_OPENAI_API_KEY=your_openai_key
+```
+
+Restart Expo after adding environment variables:
+
+```bash
 npx expo start -c
+```
 
+### 4. Run the Application
 
-4️⃣ Run the App
+```bash
 npx expo start
+```
+
 Open with:
-Expo Go
-iOS simulator
-Android emulator
 
-🧠 Technical Highlights
-Typed decision outcome validation (safe handling of invalid states using zod)
-Using NFA to model workflow per session to support hesitation + backtrack
-Custom LLM parsing logic
-Gamified engagement loop
-Secure Clerk + Supabase integration
-Modular navigation architecture (Tabs + Stack)
+- Expo Go  
+- iOS Simulator  
+- Android Emulator  
 
-📈 Future Improvements
-Visual decision-tree diagram rendering
-Collaborative decision sessions
-Enhanced confidence modeling
-Emotional bias detection
-More advanced outcome simulation
-Long-term decision tracking & analytics
+---
 
-🎯 Vision
-Balance Board is a structured thinking tool rather than any chatbot.
-Our goal is to help users build better decision making habits through guided analysis, logical thinking, and self-reflection.
+## 🧠 Technical Highlights
+
+- Strongly-typed decision outcome validation using Zod  
+- NFA-inspired session modeling supporting hesitation and backtracking  
+- Custom LLM response parsing layer  
+- Secure Clerk + Supabase integration  
+- Modular navigation architecture (Tabs + Stack)  
+- Gamified engagement loop  
+
+---
+
+## 📈 Future Improvements
+
+- Visual decision-tree rendering  
+- Collaborative decision sessions  
+- Emotional bias detection modeling  
+- Enhanced probabilistic simulation  
+- Long-term analytics dashboard  
+
+---
+
+## 🎯 Vision
+
+Balance Board is designed as a structured thinking framework rather than a conversational AI tool.
+
+The goal is to help users build stronger decision-making habits through guided analysis, logical reasoning, and self-reflection.
