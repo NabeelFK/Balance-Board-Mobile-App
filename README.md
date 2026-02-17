@@ -6,6 +6,13 @@ Balance is an AI-powered decision-making assistant designed to help users naviga
 
 Built as a modern mobile-first experience using React Native and Supabase.
 
+## 🎥 Demo Video
+
+Watch the full app walkthrough here:
+https://www.youtube.com/watch?v=7Pngm4Mi4RU
+
+--------------------------------------------
+
 
 🚀 What Problem Does It Solve?
 
