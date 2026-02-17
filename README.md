@@ -211,6 +211,26 @@ Open with:
 
 ---
 
+## 👤 My Contribution
+
+As part of a hackathon team, I focused primarily on frontend architecture and backend integration.
+
+### 📱 Frontend Development
+- Built the React Native (Expo) application using TypeScript  
+- Implemented custom navigation architecture (Stack + Tabs)  
+- Contributed to the implementation of the chat-style guided interface  
+- Structured reusable UI components and screen layouts  
+
+### 🗄 Backend & Infrastructure
+- Integrated Supabase (PostgreSQL + API) for persistent data storage  
+- Implemented Clerk authentication (sign-in, sign-up, and session management)  
+- Connected authenticated Clerk users to Supabase records for secure, user-specific data access  
+- Managed secure session persistence and frontend-to-backend data flow for XP, coins, history, and personal context  
+
+The decision engine logic and LLM integration were implemented by other team members.
+
+---
+
 ## 🧠 Technical Highlights
 
 - Strongly-typed decision outcome validation using Zod  
