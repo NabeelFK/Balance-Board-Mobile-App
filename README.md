@@ -18,56 +18,26 @@ Watch the full app walkthrough:
 
 ## 📸 Screenshots
 
-### 🏠 Main Entry Screen
-Users can quickly start a new structured decision session.
+### 🏠 Core Experience
+Users initiate a structured decision session, engage in adaptive chat-based clarification to build contextual understanding, and receive a side-by-side SWOT-driven comparison of potential outcomes.
+
 
 <p align="center">
   <img src="screenshots/Main.PNG" width="280"/>
-</p>
-
----
-
-### 💬 Guided Question Flow
-Chat-style interface that gathers structured context before analysis.
-
-<p align="center">
   <img src="screenshots/Chat.PNG" width="280"/>
-</p>
-
----
-
-### 📊 SWOT-Based Decision Comparison
-Side-by-side structured breakdown of decision paths.
-
-<p align="center">
   <img src="screenshots/Decision.PNG" width="280"/>
 </p>
 
 ---
 
-### 🎉 XP Reward & Confirmation
-Gamified reinforcement when users complete a decision.
+### 🎉 Engagement & Progression
+Decision completion is reinforced through XP rewards, historical session tracking for reflection, and leaderboard-based progression to encourage continued engagement.
+
 
 <p align="center">
   <img src="screenshots/XP.PNG" width="280"/>
-</p>
-
----
-
-### 📜 Decision History
-Users can revisit past decisions and reflect on reasoning and outcomes.
-
-<p align="center">
-  <img src="screenshots/History.PNG" width="280"/>
-</p>
-
----
-
-### 📈 Progress & Leaderboard
-XP tracking and competitive leaderboard to encourage engagement.
-
-<p align="center">
   <img src="screenshots/Leaderboard.PNG" width="280"/>
+  <img src="screenshots/History.PNG" width="280"/>
 </p>
 
 ---
