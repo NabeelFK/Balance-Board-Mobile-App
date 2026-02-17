@@ -148,7 +148,7 @@ Users can revisit previous sessions to:
 
 - Supabase (PostgreSQL + API)  
 - Clerk authentication  
-- Secure session storage  
+- Secure session handling via Clerk authentication 
 - Profile persistence (XP, coins, history, personal context)  
 
 ---
@@ -234,7 +234,7 @@ The decision engine logic and LLM integration were implemented by other team mem
 ## 🧠 Technical Highlights
 
 - Strongly-typed decision outcome validation using Zod  
-- NFA-inspired session modeling supporting hesitation and backtracking  
+- NFA-inspired session modeling to support hesitation and backtracking  
 - Custom LLM response parsing layer  
 - Secure Clerk + Supabase integration  
 - Modular navigation architecture (Tabs + Stack)  
